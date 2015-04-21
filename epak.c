@@ -123,6 +123,7 @@ int epak_blob_writer_write(struct epak_blob_writer_t *blob_writer,
     blob->adler32 = adler32(blob->adler32, (uint8_t *) data, size);
     write(blob_writer->writer->fd, data, size);
     blob->size += size;
+    blob->uncompressed_size += size;
     return 0;
 }
 
