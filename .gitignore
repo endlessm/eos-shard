@@ -5,3 +5,4 @@ rdepak
 test.epak
 test/
 *.o
+*.so
