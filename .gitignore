@@ -1,0 +1,7 @@
+*~
+\#*\#
+mkepak
+rdepak
+test.epak
+test/
+*.o
