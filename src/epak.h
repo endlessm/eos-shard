@@ -1,4 +1,11 @@
+#ifndef __EPAK_PAK_H__
+#define __EPAK_PAK_H__
+
 #include <gio/gio.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include "epak_entry.h"
 
 #define EPAK_TYPE_PAK             (epak_pak_get_type ())
 #define EPAK_PAK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EPAK_TYPE_PAK, EpakPak))
@@ -11,11 +18,14 @@ typedef struct _EpakPak        EpakPak;
 typedef struct _EpakPakClass   EpakPakClass;
 
 struct _EpakPak {
-  GObject parent;
+    GObject parent;
 };
 
 struct _EpakPakClass {
-  GObjectClass parent_class;
+    GObjectClass parent_class;
 };
 
 GType epak_pak_get_type (void) G_GNUC_CONST;
+EpakEntry * epak_pak_find_entry (EpakPak *self, char *id);
+
+#endif /* __EPAK_PAK_H__ */

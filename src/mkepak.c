@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 
         fillname(pak->entries[i].name, ents[i]->d_name);
         fd2 = openat(dirfd, ents[i]->d_name, O_RDONLY);
-        epak_write_blob(&blob_writer, &writer, &pak->entries[i].json_ld, 0);
+        epak_write_blob(&blob_writer, &writer, &pak->entries[i].metadata, 0);
         while ((size = read(fd2, buf, sizeof(buf))) > 0)
             epak_blob_writer_write(&blob_writer, buf, size);
         close(fd2);

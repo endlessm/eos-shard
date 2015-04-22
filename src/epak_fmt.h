@@ -42,7 +42,7 @@ struct epak_blob_entry
 struct epak_doc_entry
 {
     char name[20];
-    struct epak_blob_entry json_ld;
+    struct epak_blob_entry metadata;
     struct epak_blob_entry data;
 };
 

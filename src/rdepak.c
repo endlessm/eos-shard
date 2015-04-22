@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         strcpy(&name[40], ".json.2");
 
         fd2 = openat(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-        epak_read_blob(&reader, pak, &pak->entries[i].json_ld, fd);
+        epak_read_blob(&reader, pak, &pak->entries[i].metadata, fd);
         while ((size = epak_blob_reader_read(&reader, buf, sizeof(buf))) > 0)
             write(fd2, buf, size);
         close(fd2);

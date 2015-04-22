@@ -6,7 +6,23 @@ PKGS = gio-2.0
 CFLAGS = $(shell pkg-config --cflags $(PKGS)) -Wall -Werror
 LDFLAGS = $(shell pkg-config --libs $(PKGS))
 
-FILES = src/epak.c src/epak.h
+source_c_public = \
+	src/epak.c \
+	src/epak_entry.c \
+	$(NULL)
+
+source_h_public = \
+	src/epak.h \
+	src/epak_entry.h \
+	$(NULL)
+
+source_c_private = \
+	src/epak_private.c \
+	$(NULL)
+
+source_h_private = \
+	src/epak_private.h \
+	$(NULL)
 
 all: libepak.so Epak-1.0.typelib
 
@@ -22,13 +38,13 @@ Epak-1.0.gir: libepak.so
 Epak_1_0_gir_INCLUDES = GLib-2.0
 Epak_1_0_gir_CFLAGS = $(CFLAGS)
 Epak_1_0_gir_LIBS = epak
-Epak_1_0_gir_FILES = $(FILES)
+Epak_1_0_gir_FILES = $(source_c_public) $(source_h_public)
 CLEANFILES += Epak-1.0.gir Epak-1.0.typelib
 
 include Makefile.introspection
 
 libepak.so: CFLAGS += -fPIC -shared
-libepak.so: src/epak.o src/epak_private.o
+libepak.so: src/epak.o src/epak_private.o src/epak_entry.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 CLEANFILES += libepak.so src/epak.o
 
