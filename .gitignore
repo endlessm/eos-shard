@@ -6,3 +6,5 @@ test.epak
 test/
 *.o
 *.so
+*.gir
+*.typelib
