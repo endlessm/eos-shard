@@ -1,7 +1,7 @@
 
 #define _GNU_SOURCE
 
-#include "epak.h"
+#include "epak_private.h"
 
 #include <fcntl.h>
 #include <dirent.h>

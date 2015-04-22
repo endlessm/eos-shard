@@ -24,7 +24,13 @@ source_h_private = \
 	src/epak_private.h \
 	$(NULL)
 
-all: libepak.so Epak-1.0.typelib
+all: libepak.so Epak-1.0.typelib mkepak rdepak
+
+mkepak: src/mkepak.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -L. -lepak
+rdepak: src/rdepak.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -L. -lepak
+CLEANFILES += mkepak rdepak
 
 install: libepak.so Epak-1.0.typelib
 	cp Epak-1.0.typelib /home/enoch/install/lib/girepository-1.0
