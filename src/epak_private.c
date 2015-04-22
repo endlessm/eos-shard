@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "epak.h"
+#include "epak_private.h"
 #include "adler32.h"
 
 /* */
