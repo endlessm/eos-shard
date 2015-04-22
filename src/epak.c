@@ -6,8 +6,9 @@
 struct _EpakPakPrivate
 {
     struct epak_t *epak_handle;
-    gchar *path;
+    char *path;
 };
+
 typedef struct _EpakPakPrivate EpakPakPrivate;
 
 enum
@@ -21,27 +22,24 @@ enum
 
 static GParamSpec *obj_props[LAST_PROP] = { NULL, };
 
-static void initable_iface_async_init (GAsyncInitableIface *iface);
+static void initable_iface_init (GInitableIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (EpakPak, epak_pak, G_TYPE_OBJECT,
                          G_ADD_PRIVATE (EpakPak)
-                         G_IMPLEMENT_INTERFACE (G_TYPE_ASYNC_INITABLE, initable_iface_async_init))
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init))
 
-void
-epak_pak_init_async_internal (GAsyncInitable *initable,
-                                   int             io_priority,
-                                   GCancellable   *cancellable,
-                                   GAsyncReadyCallback callback,
-                                   gpointer user_data)
+static gboolean
+epak_pak_init_internal (GInitable *initable,
+                        GCancellable *cancellable,
+                        GError **error)
 {
+    return TRUE;
 }
 
-gboolean
-epak_pak_init_finish_internal (GAsyncInitable *initable,
-                                    GAsyncResult   *res,
-                                    GError        **error)
+static void
+initable_iface_init (GInitableIface *iface)
 {
-    return FALSE;
+    iface->init = epak_pak_init_internal;
 }
 
 static void
@@ -50,9 +48,11 @@ epak_pak_set_property (GObject      *gobject,
                        const GValue *value,
                        GParamSpec   *pspec)
 {
+  EpakPakPrivate *priv = epak_pak_get_instance_private(EPAK_PAK(gobject));
   switch (prop_id)
     {
     case PROP_PATH:
+      priv->path = g_value_dup_string(value);
       break;
 
     default:
@@ -66,9 +66,11 @@ epak_pak_get_property (GObject    *gobject,
                        GValue     *value,
                        GParamSpec *pspec)
 {
+  EpakPakPrivate *priv = epak_pak_get_instance_private(EPAK_PAK(gobject));
   switch (prop_id)
     {
     case PROP_PATH:
+      g_value_set_string(value, priv->path);
       break;
 
     default:
@@ -77,10 +79,17 @@ epak_pak_get_property (GObject    *gobject,
 }
 
 static void
-initable_iface_async_init (GAsyncInitableIface *iface)
+epak_pak_finalize (GObject *gobject)
 {
-  iface->init_async = epak_pak_init_async_internal;
-  iface->init_finish = epak_pak_init_finish_internal;
+  EpakPakPrivate *priv = epak_pak_get_instance_private(EPAK_PAK(gobject));
+  g_clear_pointer(&priv->path, g_free);
+  G_OBJECT_CLASS(epak_pak_parent_class)->finalize(gobject);
+}
+
+static void
+epak_pak_dispose (GObject *gobject)
+{
+  G_OBJECT_CLASS(epak_pak_parent_class)->dispose(gobject);
 }
 
 static void
@@ -88,14 +97,11 @@ epak_pak_class_init (EpakPakClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
+  gobject_class->finalize = epak_pak_finalize;
+  gobject_class->dispose = epak_pak_dispose;
   gobject_class->set_property = epak_pak_set_property;
   gobject_class->get_property = epak_pak_get_property;
 
-  /**
-   * XapianDatabase:path:
-   *
-   * The path to the database directory.
-   */
   obj_props[PROP_PATH] =
     g_param_spec_string ("path",
                          "Path",
