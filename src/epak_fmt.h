@@ -3,9 +3,9 @@
 
 /* EPAK file format */
 
-#define EPAK_MAGIC ("EPK1")
-
 #pragma pack(push,1)
+
+#define EPAK_MAGIC ("EPK1")
 
 struct epak_hdr
 {
@@ -21,6 +21,7 @@ enum epak_blob_content_type
     EPAK_BLOB_CONTENT_TYPE_PNG,
     EPAK_BLOB_CONTENT_TYPE_JPG,
     EPAK_BLOB_CONTENT_TYPE_PDF,
+    EPAK_BLOB_CONTENT_TYPE_JSON,
 };
 
 enum epak_blob_flags

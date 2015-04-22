@@ -10,8 +10,13 @@ FILES = src/epak.c src/epak.h
 
 all: libepak.so Epak-1.0.typelib
 
+install: libepak.so Epak-1.0.typelib
+	cp Epak-1.0.typelib /home/enoch/install/lib/girepository-1.0
+	cp libepak.so /home/enoch/install/lib
+	cp Epak-1.0.gir /home/enoch/install/share/gir-1.0
+
 INTROSPECTION_GIRS = Epak-1.0.gir
-INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error --no-libtool
+INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error --no-libtool --identifier-prefix=Epak
 
 Epak-1.0.gir: libepak.so
 Epak_1_0_gir_INCLUDES = GLib-2.0
@@ -23,7 +28,7 @@ CLEANFILES += Epak-1.0.gir Epak-1.0.typelib
 include Makefile.introspection
 
 libepak.so: CFLAGS += -fPIC -shared
-libepak.so: src/epak.o
+libepak.so: src/epak.o src/epak_private.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 CLEANFILES += libepak.so src/epak.o
 
