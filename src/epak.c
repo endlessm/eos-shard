@@ -1,6 +1,14 @@
+
 #include "epak.h"
 
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "adler32.h"
 #include "epak_private.h"
+#include "epak_entry.h"
 #include "epak_fmt.h"
 
 struct _EpakPakPrivate
@@ -136,22 +144,118 @@ epak_pak_init (EpakPak *pak)
 {
 }
 
-/**
- * epak_pak_find_entry:
- *
- * Finds a #EpakEntry for the given id
- *
- * Returns: (transfer full): the #EpakEntry with id
- */
-EpakEntry *
-epak_pak_find_entry (EpakPak *self, char *id)
-{
-    EpakPakPrivate *priv = epak_pak_get_instance_private(self);
 
+/**
+ * epak_util_raw_name_to_hex_name:
+ * @hex_name: (out caller-allocates) (array fixed-size=41 zero-terminated):
+ *   Storage for a hexidecimal name, which must be 41 bytes long.
+ * @raw_name: The raw name to convert.
+ *
+ * Converts a raw SHA-1 hash name into a hexadecimal string.
+ */
+void
+epak_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name)
+{
     int i;
-    for (i=0; i < priv->epak_handle->hdr.n_docs; i++) {
-        g_print("HOHOHO %d\n", i);
+
+    for (i = 0; i < EPAK_RAW_NAME_SIZE; i++)
+        sprintf (&hex_name[i*2], "%02x", raw_name[i]);
+    hex_name[EPAK_HEX_NAME_SIZE] = '\0';
+
+    return;
+}
+
+/**
+ * epak_util_hex_name_to_raw_name:
+ * @raw_name: (out caller-allocates) (array fixed-size=20):
+ *   Storage for a raw name, which must be 20 bytes long.
+ * @hex_name: The hexidecimal name to convert.
+ *
+ * Converts a raw SHA-1 hash name into a hexadecimal string. If
+ * we could not convert this name, then this function returns %FALSE.
+ */
+gboolean
+epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
+{
+    int n = strlen (hex_name);
+    if (n < EPAK_HEX_NAME_SIZE)
+        return FALSE;
+
+    int i = 0;
+    for (i = 0; i < EPAK_RAW_NAME_SIZE; i++) {
+        char a = hex_name[i*2];
+        char b = hex_name[i*2+1];
+        if (!g_ascii_isxdigit (a) || !g_ascii_isxdigit (b))
+            return FALSE;
+        raw_name[i] = (g_ascii_xdigit_value (a) << 8) | g_ascii_xdigit_value (b);
     }
 
-    return NULL;
+    return TRUE;
+}
+
+static int
+epak_doc_entry_cmp (const void *a_, const void *b_)
+{
+    const struct epak_doc_entry *a = a_;
+    const struct epak_doc_entry *b = b_;
+    return memcmp (a->raw_name, b->raw_name, EPAK_RAW_NAME_SIZE);
+}
+
+/**
+ * epak_pak_find_entry_by_raw_name:
+ *
+ * Finds a #EpakEntry for the given raw name
+ *
+ * Returns: (transfer full): the #EpakEntry with the given raw name
+ */
+EpakEntry *
+epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name)
+{
+    EpakPakPrivate *priv = epak_pak_get_instance_private(self);
+    struct epak_t *pak = priv->epak_handle;
+    return bsearch (raw_name,
+                    pak->entries, pak->hdr.n_docs,
+                    sizeof (struct epak_doc_entry),
+                    epak_doc_entry_cmp);
+}
+
+/**
+ * epak_pak_list_entries:
+ *
+ * List all entries inside @self.
+ *
+ * Returns: (transfer full) (element-type EpakEntry): a list of #EpakEntry
+ */
+GSList *
+epak_pak_list_entries (EpakPak *self)
+{
+    EpakPakPrivate *priv = epak_pak_get_instance_private (self);
+    GSList *l = NULL;
+    int i;
+
+    for (i = priv->epak_handle->hdr.n_docs - 1; i >= 0; i--) {
+        struct epak_doc_entry *entry = &priv->epak_handle->entries[i];
+        l = g_slist_prepend (l, _epak_entry_new_for_doc (self, entry));
+    }
+
+    return l;
+}
+
+GBytes *
+_epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
+{
+    EpakPakPrivate *priv = epak_pak_get_instance_private(self);
+    uint8_t *buf = g_malloc (blob->size);
+    GBytes *bytes;
+
+    pread (priv->fd, buf, blob->size, priv->epak_handle->hdr.data_offs + blob->offs);
+    bytes = g_bytes_new_take (buf, blob->size);
+
+    uint32_t csum = adler32 (ADLER32_INIT, buf, blob->size);
+    if (csum != blob->adler32) {
+        g_clear_pointer (&bytes, g_bytes_unref);
+        g_warning ("Could not load blob: checksum did not match");
+    }
+
+    return bytes;
 }

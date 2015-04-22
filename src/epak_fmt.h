@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 /* EPAK file format */
 
 #pragma pack(push,1)
@@ -39,9 +41,12 @@ struct epak_blob_entry
     uint64_t uncompressed_size;
 };
 
+#define EPAK_RAW_NAME_SIZE 20
+#define EPAK_HEX_NAME_SIZE (EPAK_RAW_NAME_SIZE*2)
+
 struct epak_doc_entry
 {
-    char name[20];
+    uint8_t raw_name[EPAK_RAW_NAME_SIZE];
     struct epak_blob_entry metadata;
     struct epak_blob_entry data;
 };

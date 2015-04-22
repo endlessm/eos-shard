@@ -3,7 +3,7 @@ MKDIR_P = mkdir -p
 
 CLEANFILES =
 PKGS = gio-2.0
-CFLAGS = $(shell pkg-config --cflags $(PKGS)) -Wall -Werror
+CFLAGS = $(shell pkg-config --cflags $(PKGS)) -Wall -Werror -O0 -g
 LDFLAGS = $(shell pkg-config --libs $(PKGS))
 
 source_c_public = \
@@ -30,7 +30,7 @@ mkepak: src/mkepak.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -L. -lepak
 rdepak: src/rdepak.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -L. -lepak
-CLEANFILES += mkepak rdepak
+CLEANFILES += mkepak rdepak src/mkepak.o src/rdepak.o
 
 install: libepak.so Epak-1.0.typelib
 	cp Epak-1.0.typelib /home/enoch/install/lib/girepository-1.0
@@ -50,9 +50,9 @@ CLEANFILES += Epak-1.0.gir Epak-1.0.typelib
 include Makefile.introspection
 
 libepak.so: CFLAGS += -fPIC -shared
-libepak.so: src/epak.o src/epak_private.o src/epak_entry.o
+libepak.so: src/epak.o src/epak_private.o src/epak_entry.o src/adler32.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-CLEANFILES += libepak.so src/epak.o
+CLEANFILES += libepak.so src/epak.o src/epak_private.o src/epak_entry.o src/adler32.o
 
 clean:
 	rm -f $(CLEANFILES)

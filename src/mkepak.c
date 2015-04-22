@@ -36,11 +36,11 @@ static char * strjoin(char *a, char *b)
     return s;
 }
 
-static void fillname(char *hexstr, char *jsonfn)
+static void fillname(uint8_t *hexstr, char *jsonfn)
 {
     int i;
     for (i = 0; i < 20; i++)
-        sscanf(jsonfn + i*2, "%2hhx", &hexstr[i]);
+        sscanf(&jsonfn[i*2], "%2hhx", &hexstr[i]);
 }
 
 int main(int argc, char *argv[])
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         char buf[4096];
         int size;
 
-        fillname(pak->entries[i].name, ents[i]->d_name);
+        fillname(pak->entries[i].raw_name, ents[i]->d_name);
         fd2 = openat(dirfd, ents[i]->d_name, O_RDONLY);
         epak_write_blob(&blob_writer, &writer, &pak->entries[i].metadata, 0);
         while ((size = read(fd2, buf, sizeof(buf))) > 0)

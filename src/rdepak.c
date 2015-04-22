@@ -15,11 +15,11 @@ static char * extdirname(char *epakname)
     return strtok(epakname, ".");
 }
 
-static void extname(char *fn, char *hash)
+static void extname(char *fn, uint8_t *hash)
 {
     int i;
     for (i = 0; i < 20; i++)
-        sprintf(&fn[i*2], "%02hhx", hash[i]);
+        sprintf((char *) &fn[i*2], "%02hhx", hash[i]);
 }
 
 int main(int argc, char *argv[])
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         int size;
         int fd2;
 
-        extname(name, pak->entries[i].name);
+        extname(name, pak->entries[i].raw_name);
         strcpy(&name[40], ".json.2");
 
         fd2 = openat(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC, 0666);

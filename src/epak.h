@@ -2,10 +2,9 @@
 #define __EPAK_PAK_H__
 
 #include <gio/gio.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <stdint.h>
 
-#include "epak_entry.h"
+#include "epak_types.h"
 
 #define EPAK_TYPE_PAK             (epak_pak_get_type ())
 #define EPAK_PAK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EPAK_TYPE_PAK, EpakPak))
@@ -26,6 +25,13 @@ struct _EpakPakClass {
 };
 
 GType epak_pak_get_type (void) G_GNUC_CONST;
-EpakEntry * epak_pak_find_entry (EpakPak *self, char *id);
+
+void epak_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name);
+gboolean epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name);
+
+EpakEntry * epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name);
+GSList * epak_pak_list_entries (EpakPak *self);
+
+GBytes * _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob);
 
 #endif /* __EPAK_PAK_H__ */
