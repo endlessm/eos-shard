@@ -35,7 +35,7 @@ INTROSPECTION_GIRS = Epak-1.0.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error --no-libtool --identifier-prefix=Epak
 
 Epak-1.0.gir: libepak.so
-Epak_1_0_gir_INCLUDES = GLib-2.0
+Epak_1_0_gir_INCLUDES = GLib-2.0 Gio-2.0
 Epak_1_0_gir_CFLAGS = $(CFLAGS)
 Epak_1_0_gir_LIBS = epak
 Epak_1_0_gir_FILES = $(source_c_public) $(source_h_public)
