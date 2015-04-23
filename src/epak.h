@@ -1,3 +1,4 @@
+
 #ifndef __EPAK_PAK_H__
 #define __EPAK_PAK_H__
 
@@ -17,11 +18,11 @@ typedef struct _EpakPak        EpakPak;
 typedef struct _EpakPakClass   EpakPakClass;
 
 struct _EpakPak {
-    GObject parent;
+  GObject parent;
 };
 
 struct _EpakPakClass {
-    GObjectClass parent_class;
+  GObjectClass parent_class;
 };
 
 GType epak_pak_get_type (void) G_GNUC_CONST;

@@ -18,11 +18,11 @@ typedef struct _EpakEntry        EpakEntry;
 typedef struct _EpakEntryClass   EpakEntryClass;
 
 struct _EpakEntry {
-    GObject parent;
+  GObject parent;
 };
 
 struct _EpakEntryClass {
-    GObjectClass parent_class;
+  GObjectClass parent_class;
 };
 
 GType epak_entry_get_type (void) G_GNUC_CONST;
