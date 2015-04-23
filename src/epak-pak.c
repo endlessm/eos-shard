@@ -224,6 +224,24 @@ epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name)
 }
 
 /**
+ * epak_pak_find_entry_by_hex_name:
+ *
+ * Finds a #EpakEntry for the given hex name
+ *
+ * Returns: (transfer full): the #EpakEntry with the given hex name
+ */
+EpakEntry *
+epak_pak_find_entry_by_hex_name (EpakPak *self, char *hex_name)
+{
+  uint8_t raw_name[EPAK_RAW_NAME_SIZE];
+
+  if (!epak_util_hex_name_to_raw_name (raw_name, hex_name))
+    return NULL;
+
+  return epak_pak_find_entry_by_raw_name (self, raw_name);
+}
+
+/**
  * epak_pak_list_entries:
  *
  * List all entries inside @self.
