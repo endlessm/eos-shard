@@ -9,6 +9,6 @@ let x = e.get_hex_name();
 print(x);
 print(pak.find_entry_by_hex_name(x));
 
-print(e.read_data().get_data());
-print(e.read_metadata().get_data());
+print(e.data.load_contents().get_data());
+print(e.metadata.load_contents().get_data());
 

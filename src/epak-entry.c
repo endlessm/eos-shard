@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "epak-pak.h"
+#include "epak-blob.h"
 #include "epak_fmt.h"
 
 static EpakEntry *
@@ -66,34 +67,14 @@ epak_entry_get_hex_name (EpakEntry *entry)
   return hex_name;
 }
 
-/**
- * epak_entry_read_metadata:
- *
- * Synchronously read and return the metadata blob as a #GBytes.
- */
-GBytes *
-epak_entry_read_metadata (EpakEntry *entry)
-{
-  return _epak_pak_load_blob (entry->pak, &entry->doc->metadata);
-}
-
-/**
- * epak_entry_read_data:
- *
- * Synchronously read and return the data blob as a #GBytes.
- */
-GBytes *
-epak_entry_read_data (EpakEntry *entry)
-{
-  return _epak_pak_load_blob (entry->pak, &entry->doc->data);
-}
-
 EpakEntry *
 _epak_entry_new_for_doc (EpakPak *pak, struct epak_doc_entry *doc)
 {
   EpakEntry *entry = epak_entry_new ();
   entry->pak = g_object_ref (pak);
   entry->doc = doc;
+  entry->metadata = _epak_blob_new_for_blob (pak, &doc->metadata);
+  entry->data = _epak_blob_new_for_blob (pak, &doc->data);
   return entry;
 }
 

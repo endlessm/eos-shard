@@ -14,14 +14,15 @@ struct _EpakEntry {
   int ref_count;
   EpakPak *pak;
   struct epak_doc_entry *doc;
+
+  /*< public >*/
+  EpakBlob *data;
+  EpakBlob *metadata;
 };
 
 EpakEntry * _epak_entry_new_for_doc (EpakPak *pak, struct epak_doc_entry *doc);
 
 uint8_t * epak_entry_get_raw_name (EpakEntry *entry);
 char * epak_entry_get_hex_name (EpakEntry *entry);
-
-GBytes * epak_entry_read_metadata (EpakEntry *entry);
-GBytes * epak_entry_read_data (EpakEntry *entry);
 
 #endif /* EPAK_ENTRY_H */

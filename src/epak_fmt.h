@@ -17,7 +17,7 @@ struct epak_hdr
     uint64_t data_offs;
 };
 
-enum epak_blob_content_type
+typedef enum epak_blob_content_type
 {
     EPAK_BLOB_CONTENT_TYPE_UNKNOWN,
     EPAK_BLOB_CONTENT_TYPE_HTML,
@@ -25,12 +25,12 @@ enum epak_blob_content_type
     EPAK_BLOB_CONTENT_TYPE_JPG,
     EPAK_BLOB_CONTENT_TYPE_PDF,
     EPAK_BLOB_CONTENT_TYPE_JSON,
-};
+} EpakBlobContentType;
 
-enum epak_blob_flags
+typedef enum epak_blob_flags
 {
     EPAK_BLOB_FLAG_COMPRESSED_ZLIB = 0x01,
-};
+} EpakBlobFlags;
 
 struct epak_blob_entry
 {
