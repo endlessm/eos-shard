@@ -6,37 +6,33 @@
 #include "epak-pak.h"
 #include "epak_fmt.h"
 
-struct _EpakEntryPrivate {
-  EpakPak *pak;
-  struct epak_doc_entry *doc;
-};
-
-typedef struct _EpakEntryPrivate EpakEntryPrivate;
-
-G_DEFINE_TYPE_WITH_PRIVATE (EpakEntry, epak_entry, G_TYPE_OBJECT)
-
-static void
-epak_entry_dispose (GObject *object)
+static EpakEntry *
+epak_entry_new (void)
 {
-  EpakEntry *entry = EPAK_ENTRY (object);
-  EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
-
-  g_clear_object (&priv->pak);
-
-  G_OBJECT_CLASS (epak_entry_parent_class)->dispose (object);
+  EpakEntry *entry = g_new0 (EpakEntry, 1);
+  entry->ref_count = 1;
+  return entry;
 }
 
 static void
-epak_entry_class_init (EpakEntryClass *klass)
+epak_entry_free (EpakEntry *entry)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-  object_class->dispose = epak_entry_dispose;
+  g_object_unref (entry->pak);
+  g_free (entry);
 }
 
-static void 
-epak_entry_init (EpakEntry *entry)
+static EpakEntry *
+epak_entry_ref (EpakEntry *entry)
 {
+  entry->ref_count++;
+  return entry;
+}
+
+static void
+epak_entry_unref (EpakEntry *entry)
+{
+  if (--entry->ref_count == 0)
+    epak_entry_free (entry);
 }
 
 /**
@@ -50,8 +46,7 @@ epak_entry_init (EpakEntry *entry)
 uint8_t *
 epak_entry_get_raw_name (EpakEntry *entry)
 {
-  EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
-  return (uint8_t*) priv->doc->raw_name;
+  return (uint8_t*) entry->doc->raw_name;
 }
 
 /**
@@ -65,9 +60,8 @@ epak_entry_get_raw_name (EpakEntry *entry)
 char *
 epak_entry_get_hex_name (EpakEntry *entry)
 {
-  EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
   char *hex_name = g_malloc (41);
-  epak_util_raw_name_to_hex_name (hex_name, priv->doc->raw_name);
+  epak_util_raw_name_to_hex_name (hex_name, entry->doc->raw_name);
   hex_name[EPAK_HEX_NAME_SIZE] = '\0';
   return hex_name;
 }
@@ -80,8 +74,7 @@ epak_entry_get_hex_name (EpakEntry *entry)
 GBytes *
 epak_entry_read_metadata (EpakEntry *entry)
 {
-  EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
-  return _epak_pak_load_blob (priv->pak, &priv->doc->metadata);
+  return _epak_pak_load_blob (entry->pak, &entry->doc->metadata);
 }
 
 /**
@@ -92,16 +85,17 @@ epak_entry_read_metadata (EpakEntry *entry)
 GBytes *
 epak_entry_read_data (EpakEntry *entry)
 {
-  EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
-  return _epak_pak_load_blob (priv->pak, &priv->doc->data);
+  return _epak_pak_load_blob (entry->pak, &entry->doc->data);
 }
 
 EpakEntry *
 _epak_entry_new_for_doc (EpakPak *pak, struct epak_doc_entry *doc)
 {
-  EpakEntry *entry = g_object_new (EPAK_TYPE_ENTRY, NULL);
-  EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
-  priv->pak = g_object_ref (pak);
-  priv->doc = doc;
+  EpakEntry *entry = epak_entry_new ();
+  entry->pak = g_object_ref (pak);
+  entry->doc = doc;
   return entry;
 }
+
+G_DEFINE_BOXED_TYPE (EpakEntry, epak_entry,
+                     epak_entry_ref, epak_entry_unref)
