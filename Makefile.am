@@ -40,7 +40,7 @@ Epak_1_0_gir_LIBS = libepak.la
 Epak_1_0_gir_FILES = $(source_public)
 CLEANFILES += Epak-1.0.gir Epak-1.0.typelib
 
-girdir = $(pkglibdir)
+girdir = $(datadir)/gir-1.0
 gir_DATA = Epak-1.0.gir
-typelibdir = $(pkglibdir)
+typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = Epak-1.0.typelib
