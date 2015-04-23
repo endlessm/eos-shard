@@ -215,11 +215,14 @@ epak_doc_entry_cmp (const void *a_, const void *b_)
 EpakEntry *
 epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name)
 {
+  struct epak_doc_entry key = { };
+  memcpy (key.raw_name, raw_name, EPAK_RAW_NAME_SIZE);
+
   EpakPakPrivate *priv = epak_pak_get_instance_private(self);
   struct epak_t *pak = priv->epak_handle;
 
   struct epak_doc_entry *entry;
-  entry = bsearch (raw_name,
+  entry = bsearch (&key,
                    pak->entries, pak->hdr.n_docs,
                    sizeof (struct epak_doc_entry),
                    epak_doc_entry_cmp);
