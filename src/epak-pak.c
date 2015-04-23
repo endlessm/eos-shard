@@ -153,7 +153,7 @@ epak_pak_init (EpakPak *pak)
 
 /**
  * epak_util_raw_name_to_hex_name:
- * @hex_name: (out caller-allocates) (array fixed-size=41 zero-terminated):
+ * @hex_name: (out caller-allocates) (array fixed-size=41 zero-terminated=1):
  *   Storage for a hexidecimal name, which must be 41 bytes long.
  * @raw_name: The raw name to convert.
  *
