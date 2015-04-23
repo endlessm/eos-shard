@@ -68,7 +68,7 @@ epak_entry_get_hex_name (EpakEntry *entry)
   EpakEntryPrivate *priv = epak_entry_get_instance_private (entry);
   char *hex_name = g_malloc (41);
   epak_util_raw_name_to_hex_name (hex_name, priv->doc->raw_name);
-  hex_name[40] = '\0';
+  hex_name[EPAK_HEX_NAME_SIZE] = '\0';
   return hex_name;
 }
 
