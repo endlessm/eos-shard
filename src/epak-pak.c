@@ -191,7 +191,7 @@ epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
     char b = hex_name[i*2+1];
     if (!g_ascii_isxdigit (a) || !g_ascii_isxdigit (b))
       return FALSE;
-    raw_name[i] = (g_ascii_xdigit_value (a) << 8) | g_ascii_xdigit_value (b);
+    raw_name[i] = (g_ascii_xdigit_value (a) << 4) | g_ascii_xdigit_value (b);
   }
 
   return TRUE;
@@ -217,10 +217,13 @@ epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name)
 {
   EpakPakPrivate *priv = epak_pak_get_instance_private(self);
   struct epak_t *pak = priv->epak_handle;
-  return bsearch (raw_name,
-                  pak->entries, pak->hdr.n_docs,
-                  sizeof (struct epak_doc_entry),
-                  epak_doc_entry_cmp);
+
+  struct epak_doc_entry *entry;
+  entry = bsearch (raw_name,
+                   pak->entries, pak->hdr.n_docs,
+                   sizeof (struct epak_doc_entry),
+                   epak_doc_entry_cmp);
+  return _epak_entry_new_for_doc (self, entry);
 }
 
 /**
