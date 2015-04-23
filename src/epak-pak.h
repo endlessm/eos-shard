@@ -5,7 +5,7 @@
 #include <gio/gio.h>
 #include <stdint.h>
 
-#include "epak_types.h"
+#include "epak-types.h"
 
 #define EPAK_TYPE_PAK             (epak_pak_get_type ())
 #define EPAK_PAK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EPAK_TYPE_PAK, EpakPak))

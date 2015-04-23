@@ -15,9 +15,9 @@ INTROSPECTION_GIRS = Epak-1.0.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 source_public = \
-	src/epak.c src/epak.h \
-	src/epak_entry.c src/epak_entry.h \
-	src/epak_types.h \
+	src/epak-pak.c src/epak-pak.h \
+	src/epak-entry.c src/epak-entry.h \
+	src/epak-types.h \
 	$(NULL)
 
 source_private = \

@@ -1,5 +1,5 @@
 
-#include "epak.h"
+#include "epak-pak.h"
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -7,8 +7,9 @@
 #include <string.h>
 
 #include "adler32.h"
+#include "epak-entry.h"
+
 #include "epak_private.h"
-#include "epak_entry.h"
 #include "epak_fmt.h"
 
 struct _EpakPakPrivate

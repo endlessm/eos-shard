@@ -1,9 +1,9 @@
 
-#include "epak_entry.h"
+#include "epak-entry.h"
 
 #include <stdio.h>
 
-#include "epak.h"
+#include "epak-pak.h"
 #include "epak_fmt.h"
 
 struct _EpakEntryPrivate {
