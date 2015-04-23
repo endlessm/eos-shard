@@ -1,5 +1,6 @@
 
-#pragma once
+#ifndef EPAK_PRIVATE_H
+#define EPAK_PRIVATE_H
 
 #include <stdint.h>
 #include <unistd.h>
@@ -58,3 +59,6 @@ int epak_write_blob(struct epak_blob_writer_t *blob_writer,
                     struct epak_blob_entry *blob,
                     enum epak_blob_writer_flags flags);
 int epak_write_finish(struct epak_writer_t *writer);
+
+#endif /* EPAK_PRIVATE_H */
+

@@ -1,5 +1,6 @@
 
-#pragma once
+#ifndef EPAK_FMT_H
+#define EPAK_FMT_H
 
 #include <stdint.h>
 
@@ -52,3 +53,5 @@ struct epak_doc_entry
 };
 
 #pragma pack(pop)
+
+#endif /* EPAK_FMT_H */

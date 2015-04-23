@@ -1,6 +1,6 @@
 
-#ifndef __EPAK_ENTRY_H__
-#define __EPAK_ENTRY_H__
+#ifndef EPAK_ENTRY_H
+#define EPAK_ENTRY_H
 
 #include <gio/gio.h>
 #include <stdint.h>
@@ -35,4 +35,4 @@ char * epak_entry_get_hex_name (EpakEntry *entry);
 GBytes * epak_entry_read_metadata (EpakEntry *entry);
 GBytes * epak_entry_read_data (EpakEntry *entry);
 
-#endif /* __EPAK_ENTRY_H__ */
+#endif /* EPAK_ENTRY_H */

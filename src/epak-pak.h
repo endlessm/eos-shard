@@ -1,6 +1,6 @@
 
-#ifndef __EPAK_PAK_H__
-#define __EPAK_PAK_H__
+#ifndef EPAK_PAK_H
+#define EPAK_PAK_H
 
 #include <gio/gio.h>
 #include <stdint.h>
@@ -35,4 +35,5 @@ GSList * epak_pak_list_entries (EpakPak *self);
 
 GBytes * _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob);
 
-#endif /* __EPAK_PAK_H__ */
+#endif /* EPAK_PAK_H */
+
