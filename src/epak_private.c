@@ -122,8 +122,6 @@ int epak_blob_writer_write(struct epak_blob_writer_t *blob_writer,
     struct epak_blob_entry *blob = blob_writer->blob;
     blob->adler32 = adler32(blob->adler32, (uint8_t *) data, size);
     write(blob_writer->writer->fd, data, size);
-    blob->size += size;
-    blob->uncompressed_size += size;
     return 0;
 }
 
@@ -135,10 +133,8 @@ int epak_write_blob(struct epak_blob_writer_t *blob_writer,
     blob_writer->writer = writer;
     blob_writer->blob = blob;
 
-    blob->flags = 0;
     blob->adler32 = ADLER32_INIT;
     blob->offs = lalign(writer->fd) - writer->pak->hdr.data_offs;
-    blob->size = 0;
 
     return 0;
 }
