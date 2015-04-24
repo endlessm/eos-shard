@@ -106,7 +106,7 @@ write_blob (struct epak_writer_t *pakw,
   GFileInputStream *file_stream = g_file_read (wbe->file, NULL, NULL);
   GInputStream *stream;
 
-  if (be->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
+  if (wbe->base.flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
     GZlibCompressor *compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
     stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
     g_object_unref (file_stream);
