@@ -6,7 +6,6 @@
 
 #include "adler32.h"
 #include "epak-pak.h"
-#include "epak_fmt.h"
 
 struct epak_writer_doc_entry
 {
@@ -60,15 +59,6 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
       g_warning ("Unknown content-type %s from file: %s\n", ct, g_file_info_get_name (info));
     }
 
-  /* XXX: ekn heuristics */
-  switch (blob->content_type)
-    {
-    case EPAK_BLOB_CONTENT_TYPE_HTML:
-    case EPAK_BLOB_CONTENT_TYPE_JSON:
-      blob->flags |= EPAK_BLOB_FLAG_COMPRESSED_ZLIB;
-      break;
-    }
-
   blob->uncompressed_size = g_file_info_get_size (info);
 
   g_object_unref (info);
@@ -77,7 +67,10 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
 void
 epak_writer_add_entry (EpakWriter *writer,
                        char *hex_name,
-                       GFile *metadata, GFile *data)
+                       GFile *metadata,
+                       EpakBlobFlags metadata_flags,
+                       GFile *data,
+                       EpakBlobFlags data_flags)
 {
   EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
   struct epak_writer_doc_entry doc = {};
@@ -85,8 +78,10 @@ epak_writer_add_entry (EpakWriter *writer,
   epak_util_hex_name_to_raw_name (doc.base.raw_name, hex_name);
 
   doc.metadata_file = metadata;
+  doc.base.metadata.flags = metadata_flags;
   fill_blob_entry_from_gfile (&doc.base.metadata, metadata);
   doc.data_file = data;
+  doc.base.data.flags = data_flags;
   fill_blob_entry_from_gfile (&doc.base.data, data);
 
   g_array_append_val (priv->entries, doc);
@@ -139,7 +134,7 @@ epak_writer_write (EpakWriter *writer,
                    char *path)
 {
   EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
-  int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC);
+  int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   struct epak_hdr hdr;
   int entry_offs;
 

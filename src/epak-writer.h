@@ -2,6 +2,7 @@
 #ifndef EPAK_WRITER_H
 #define EPAK_WRITER_H
 
+#include "epak_fmt.h"
 #include <gio/gio.h>
 
 #define EPAK_TYPE_WRITER             (epak_writer_get_type ())
@@ -28,7 +29,10 @@ GType epak_writer_get_type (void) G_GNUC_CONST;
 
 void epak_writer_add_entry (EpakWriter *writer,
                             char *hex_name,
-                            GFile *metadata, GFile *data);
+                            GFile *metadata,
+                            EpakBlobFlags metadata_flags,
+                            GFile *data,
+                            EpakBlobFlags data_flags);
 void epak_writer_write (EpakWriter *writer,
                         char *path);
 
