@@ -25,6 +25,7 @@ typedef enum epak_blob_content_type
     EPAK_BLOB_CONTENT_TYPE_JPG,
     EPAK_BLOB_CONTENT_TYPE_PDF,
     EPAK_BLOB_CONTENT_TYPE_JSON,
+    EPAK_BLOB_CONTENT_TYPE_TEXT_PLAIN,
 } EpakBlobContentType;
 
 typedef enum epak_blob_flags

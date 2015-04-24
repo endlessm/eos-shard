@@ -18,6 +18,7 @@ source_public = \
 	src/epak-pak.c src/epak-pak.h \
 	src/epak-entry.c src/epak-entry.h \
 	src/epak-blob.c src/epak-blob.h \
+	src/epak-writer.c src/epak-writer.h \
 	src/epak_fmt.h \
 	src/epak-types.h \
 	$(NULL)
