@@ -45,9 +45,12 @@ epak_pak_init_internal (GInitable *initable,
   EpakPakPrivate *priv = epak_pak_get_instance_private (pak);
   if (priv->path) {
     priv->fd = open (priv->path, O_RDONLY);
+    if (priv->fd == -1)
+        return FALSE;
+
     int ret = epak_open (&priv->epak_handle, priv->fd);
 
-    if (ret)
+    if (ret == 0)
       return TRUE;
     else
       return FALSE;
