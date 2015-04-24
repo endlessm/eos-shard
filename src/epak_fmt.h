@@ -30,7 +30,8 @@ typedef enum epak_blob_content_type
 
 typedef enum epak_blob_flags
 {
-    EPAK_BLOB_FLAG_COMPRESSED_ZLIB = 0x01,
+    EPAK_BLOB_FLAG_NONE,
+    EPAK_BLOB_FLAG_COMPRESSED_ZLIB,
 } EpakBlobFlags;
 
 struct epak_blob_entry

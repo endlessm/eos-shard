@@ -6,9 +6,9 @@ const Epak = imports.gi.Epak;
 let pakw = new Epak.Writer();
 pakw.add_entry("7d97e98f8af710c7e7fe703abc8f639e0ee507c4",
                Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json"),
-               Epak.BlobFlags.BLOB_FLAG_COMPRESSED_ZLIB,
+               Epak.BlobFlags.COMPRESSED_ZLIB,
                Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob"),
-               Epak.BlobFlags.BLOB_FLAG_COMPRESSED_ZLIB);
+               Epak.BlobFlags.NONE);
 pakw.write("fart.epak");
 
 let pak = new Epak.Pak({ path: 'fart.epak' });
