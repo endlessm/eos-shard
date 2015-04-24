@@ -12,8 +12,8 @@ let x = e.get_hex_name();
 print(x);
 print(pak.find_entry_by_hex_name(x));
 
-print(e.data.load_contents().get_data());
 print(e.metadata.load_contents().get_data());
+print(e.data.load_contents().get_data());
 
 let pakw = new Epak.Writer();
 pakw.add_entry("7d97e98f8af710c7e7fe703abc8f639e0ee507c4",
