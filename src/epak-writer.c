@@ -77,6 +77,11 @@ epak_writer_add_entry (EpakWriter *writer,
 
   epak_util_hex_name_to_raw_name (doc.base.raw_name, hex_name);
 
+  if (priv->entries->len > 0) {
+    struct epak_writer_doc_entry *e = &g_array_index (priv->entries, struct epak_writer_doc_entry, priv->entries->len - 1);
+    g_assert (memcmp (doc.base.raw_name, e->base.raw_name, EPAK_RAW_NAME_SIZE) > 0);
+  }
+
   doc.metadata_file = metadata;
   doc.base.metadata.flags = metadata_flags;
   fill_blob_entry_from_gfile (&doc.base.metadata, metadata);
