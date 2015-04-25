@@ -13,6 +13,7 @@ source_public = \
 	src/epak-writer.c src/epak-writer.h \
 	src/epak_fmt.h \
 	src/epak-types.h \
+	src/epak-utils.h \
 	$(NULL)
 
 lib_LTLIBRARIES = libepak.la

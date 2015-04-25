@@ -10,6 +10,7 @@
 #include "epak-entry.h"
 
 #include "epak_fmt.h"
+#include "epak-utils.h"
 
 struct _EpakPakPrivate
 {
@@ -35,16 +36,6 @@ static void initable_iface_init (GInitableIface *iface);
 G_DEFINE_TYPE_WITH_CODE (EpakPak, epak_pak, G_TYPE_OBJECT,
                          G_ADD_PRIVATE (EpakPak)
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init))
-
-#define ALIGN(n) (((n) + 0x3f) & ~0x3f)
-
-static off_t lalign(int fd)
-{
-  off_t off = lseek (fd, 0, SEEK_CUR);
-  off = ALIGN (off);
-  lseek (fd, off, SEEK_SET);
-  return off;
-}
 
 static gboolean
 epak_pak_init_internal (GInitable *initable,

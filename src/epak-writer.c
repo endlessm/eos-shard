@@ -6,6 +6,7 @@
 #include <zlib.h>
 
 #include "epak-pak.h"
+#include "epak-utils.h"
 
 struct epak_writer_doc_entry
 {
@@ -85,16 +86,6 @@ epak_writer_add_entry (EpakWriter *writer,
   fill_blob_entry_from_gfile (&doc.base.data, data);
 
   g_array_append_val (priv->entries, doc);
-}
-
-#define ALIGN(n) (((n) + 0x3f) & ~0x3f)
-
-static off_t lalign(int fd)
-{
-  off_t off = lseek (fd, 0, SEEK_CUR);
-  off = ALIGN (off);
-  lseek (fd, off, SEEK_SET);
-  return off;
 }
 
 static void
