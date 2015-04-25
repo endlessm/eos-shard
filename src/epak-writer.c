@@ -54,11 +54,10 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
     blob->content_type = EPAK_BLOB_CONTENT_TYPE_JSON;
   else if (strcmp (ct, "text/plain") == 0)
     blob->content_type = EPAK_BLOB_CONTENT_TYPE_TEXT_PLAIN;
-  else
-    {
-      blob->content_type = EPAK_BLOB_CONTENT_TYPE_UNKNOWN;
-      g_warning ("Unknown content-type %s from file: %s\n", ct, g_file_info_get_name (info));
-    }
+  else {
+    blob->content_type = EPAK_BLOB_CONTENT_TYPE_UNKNOWN;
+    g_warning ("Unknown content-type %s from file: %s\n", ct, g_file_info_get_name (info));
+  }
 
   blob->uncompressed_size = g_file_info_get_size (info);
 
