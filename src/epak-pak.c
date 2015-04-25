@@ -9,13 +9,13 @@
 #include "adler32.h"
 #include "epak-entry.h"
 
-#include "epak_private.h"
 #include "epak_fmt.h"
 
 struct _EpakPakPrivate
 {
   int fd;
-  struct epak_t *epak_handle;
+  struct epak_hdr hdr;
+  struct epak_doc_entry *entries;
   char *path;
 };
 
@@ -36,6 +36,16 @@ G_DEFINE_TYPE_WITH_CODE (EpakPak, epak_pak, G_TYPE_OBJECT,
                          G_ADD_PRIVATE (EpakPak)
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init))
 
+#define ALIGN(n) (((n) + 0x3f) & ~0x3f)
+
+static off_t lalign(int fd)
+{
+  off_t off = lseek (fd, 0, SEEK_CUR);
+  off = ALIGN (off);
+  lseek (fd, off, SEEK_SET);
+  return off;
+}
+
 static gboolean
 epak_pak_init_internal (GInitable *initable,
                         GCancellable *cancellable,
@@ -43,21 +53,29 @@ epak_pak_init_internal (GInitable *initable,
 {
   EpakPak *pak = EPAK_PAK (initable);
   EpakPakPrivate *priv = epak_pak_get_instance_private (pak);
-  if (priv->path) {
-    priv->fd = open (priv->path, O_RDONLY);
-    if (priv->fd == -1)
-        return FALSE;
 
-    int ret = epak_open (&priv->epak_handle, priv->fd);
-
-    if (ret == 0)
-      return TRUE;
-    else
-      return FALSE;
-  } else {
-    // FIXME make an error to set
+  if (!priv->path)
     return FALSE;
-  }
+
+  priv->fd = open (priv->path, O_RDONLY);
+  if (priv->fd < 0)
+    return FALSE;
+
+  read (priv->fd, &priv->hdr, sizeof (priv->hdr));
+  if (memcmp (priv->hdr.magic, EPAK_MAGIC, sizeof (priv->hdr.magic) != 0))
+    return FALSE;
+
+  priv->entries = g_new (struct epak_doc_entry, priv->hdr.n_docs);
+
+  lalign (priv->fd);
+
+  int i;
+  for (i = 0; i < priv->hdr.n_docs; i++)
+    read (priv->fd, &priv->entries[i], sizeof (struct epak_doc_entry));
+
+  lalign (priv->fd);
+
+  return TRUE;
 }
 
 static void
@@ -222,11 +240,10 @@ epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name)
   memcpy (key.raw_name, raw_name, EPAK_RAW_NAME_SIZE);
 
   EpakPakPrivate *priv = epak_pak_get_instance_private(self);
-  struct epak_t *pak = priv->epak_handle;
 
   struct epak_doc_entry *entry;
   entry = bsearch (&key,
-                   pak->entries, pak->hdr.n_docs,
+                   priv->entries, priv->hdr.n_docs,
                    sizeof (struct epak_doc_entry),
                    epak_doc_entry_cmp);
   return _epak_entry_new_for_doc (self, entry);
@@ -264,8 +281,8 @@ epak_pak_list_entries (EpakPak *self)
   GSList *l = NULL;
   int i;
 
-  for (i = priv->epak_handle->hdr.n_docs - 1; i >= 0; i--) {
-    struct epak_doc_entry *entry = &priv->epak_handle->entries[i];
+  for (i = priv->hdr.n_docs - 1; i >= 0; i--) {
+    struct epak_doc_entry *entry = &priv->entries[i];
     l = g_slist_prepend (l, _epak_entry_new_for_doc (self, entry));
   }
 
@@ -282,7 +299,7 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
   GZlibDecompressor *decompressor;
   GInputStream *out_stream;
 
-  pread (priv->fd, buf, blob->size, priv->epak_handle->hdr.data_offs + blob->offs);
+  pread (priv->fd, buf, blob->size, priv->hdr.data_offs + blob->offs);
   bytes = g_bytes_new_take (buf, blob->size);
 
   uint32_t csum = adler32 (ADLER32_INIT, buf, blob->size);
