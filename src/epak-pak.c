@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <zlib.h>
 
-#include "adler32.h"
 #include "epak-entry.h"
 
 #include "epak_fmt.h"
@@ -300,7 +300,8 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
   pread (priv->fd, buf, blob->size, priv->hdr.data_offs + blob->offs);
   bytes = g_bytes_new_take (buf, blob->size);
 
-  uint32_t csum = adler32 (ADLER32_INIT, buf, blob->size);
+  uint32_t csum = adler32 (0L, NULL, 0);
+  csum = adler32 (csum, buf, blob->size);
   if (csum != blob->adler32) {
     g_clear_pointer (&bytes, g_bytes_unref);
     g_warning ("Could not load blob: checksum did not match");

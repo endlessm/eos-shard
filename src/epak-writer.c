@@ -3,8 +3,8 @@
 
 #include <fcntl.h>
 #include <string.h>
+#include <zlib.h>
 
-#include "adler32.h"
 #include "epak-pak.h"
 
 struct epak_writer_doc_entry
@@ -113,14 +113,14 @@ write_blob (int fd, int data_offs,
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  blob->adler32 = ADLER32_INIT;
+  blob->adler32 = adler32 (0L, NULL, 0);
   blob->offs = lalign (fd) - data_offs;
 
   char buf[4096];
   int size, total_size = 0;
   while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
     write (fd, buf, size);
-    blob->adler32 = adler32 (blob->adler32, (uint8_t *) buf, size);
+    blob->adler32 = adler32 (blob->adler32, (const Bytef *) buf, size);
     total_size += size;
   }
 

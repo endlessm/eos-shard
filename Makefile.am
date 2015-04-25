@@ -15,13 +15,9 @@ source_public = \
 	src/epak-types.h \
 	$(NULL)
 
-source_private = \
-	src/adler32.c src/adler32.h \
-	$(NULL)
-
 lib_LTLIBRARIES = libepak.la
 libepak_la_CPPFLAGS = -I $(srcdir)
-libepak_la_SOURCES = $(source_public) $(source_private)
+libepak_la_SOURCES = $(source_public)
 libepak_la_LIBADD = $(LIBEPAK_LIBS)
 
 include $(INTROSPECTION_MAKEFILE)
