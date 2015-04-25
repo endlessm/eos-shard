@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "epak-types.h"
+#include "epak-format.h"
 
 #define EPAK_TYPE_PAK             (epak_pak_get_type ())
 #define EPAK_PAK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EPAK_TYPE_PAK, EpakPak))

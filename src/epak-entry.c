@@ -5,7 +5,7 @@
 
 #include "epak-pak.h"
 #include "epak-blob.h"
-#include "epak_fmt.h"
+#include "epak-format.h"
 
 static EpakEntry *
 epak_entry_new (void)

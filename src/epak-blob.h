@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include "epak-types.h"
-#include "epak_fmt.h"
+#include "epak-format.h"
 
 GType epak_blob_get_type (void) G_GNUC_CONST;
 

@@ -9,7 +9,7 @@
 
 #include "epak-entry.h"
 
-#include "epak_fmt.h"
+#include "epak-format.h"
 #include "epak-utils.h"
 
 struct _EpakPakPrivate

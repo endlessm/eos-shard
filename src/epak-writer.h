@@ -2,8 +2,8 @@
 #ifndef EPAK_WRITER_H
 #define EPAK_WRITER_H
 
-#include "epak_fmt.h"
 #include <gio/gio.h>
+#include "epak-format.h"
 
 #define EPAK_TYPE_WRITER             (epak_writer_get_type ())
 #define EPAK_WRITER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EPAK_TYPE_WRITER, EpakWriter))
