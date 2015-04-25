@@ -1,15 +1,7 @@
 
 CLEANFILES =
 
-noinst_PROGRAMS = mkepak rdepak
-
 AM_CFLAGS = $(LIBEPAK_CFLAGS)
-
-mkepak_SOURCES = src/mkepak.c
-mkepak_LDADD = libepak.la $(LIBEPAK_LIBS)
-
-rdepak_SOURCES = src/rdepak.c
-rdepak_LDADD = libepak.la $(LIBEPAK_LIBS)
 
 INTROSPECTION_GIRS = Epak-1.0.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
@@ -24,7 +16,6 @@ source_public = \
 	$(NULL)
 
 source_private = \
-	src/epak_private.c src/epak_private.h \
 	src/adler32.c src/adler32.h \
 	$(NULL)
 
