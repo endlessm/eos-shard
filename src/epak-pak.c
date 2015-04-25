@@ -293,11 +293,9 @@ GBytes *
 _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
 {
   EpakPakPrivate *priv = epak_pak_get_instance_private(self);
-  uint8_t *buf = g_malloc (blob->size);
   GBytes *bytes;
-  GInputStream *bytestream;
-  GZlibDecompressor *decompressor;
-  GInputStream *out_stream;
+
+  uint8_t *buf = g_malloc (blob->size);
 
   pread (priv->fd, buf, blob->size, priv->hdr.data_offs + blob->offs);
   bytes = g_bytes_new_take (buf, blob->size);
@@ -309,17 +307,24 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
   }
 
   if (blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
+    GInputStream *bytestream;
+    GZlibDecompressor *decompressor;
+    GInputStream *out_stream;
+
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
     bytestream = g_memory_input_stream_new_from_bytes (bytes);
+    g_bytes_unref (bytes);
     out_stream = g_converter_input_stream_new (G_INPUT_STREAM (bytestream), G_CONVERTER (decompressor));
+    g_object_unref (bytestream);
+    g_object_unref (decompressor);
 
     GError *err = NULL;
     bytes = g_input_stream_read_bytes (out_stream, blob->uncompressed_size, NULL, &err);
-    if (err) {
-        g_print("%s\n", err->message);
-    }
-    return bytes;
-  } else {
-    return bytes;
+    if (err)
+      g_warning ("Could not decompress stream: %s", err->message);
+
+    g_object_unref (out_stream);
   }
+
+  return bytes;
 }
