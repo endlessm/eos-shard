@@ -1,6 +1,6 @@
 
-AC_INIT([libepak], [0],
-    [], [libepak], [http://endlessm.com])
+AC_INIT([eos-packfile], [0],
+    [], [eos-packfile], [http://endlessm.com])
 AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign 1.11 tar-ustar no-dist-gzip dist-xz subdir-objects])
 AM_SILENT_RULES([yes])
 
