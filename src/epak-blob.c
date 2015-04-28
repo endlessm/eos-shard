@@ -66,6 +66,31 @@ epak_blob_get_content_type (EpakBlob *blob)
   }
 }
 
+
+/**
+ * epak_blob_get_stream:
+ *
+ * Creates and returns a #GInputStream to the blob's content. If the blob is
+ * compressed, the returned stream will be streamed through a
+ * #GZlibDecompressor, yielding decompressed data.
+ *
+ * Returns: (transfer full): a new GInputStream for the blob's data
+ */
+GInputStream *
+epak_blob_get_stream (EpakBlob *blob)
+{
+  GInputStream *stream;
+  GZlibDecompressor *decompressor;
+
+  stream = G_INPUT_STREAM (_epak_blob_stream_new_for_blob (blob, blob->pak));
+  if (blob->blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
+    decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
+    return g_converter_input_stream_new (stream, G_CONVERTER (decompressor));
+  }
+
+  return stream;
+}
+
 EpakBlobFlags
 epak_blob_get_flags (EpakBlob *blob)
 {

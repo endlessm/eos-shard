@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "epak-types.h"
+#include "epak-blob-stream.h"
 #include "epak-format.h"
 
 GType epak_blob_get_type (void) G_GNUC_CONST;
@@ -21,6 +22,7 @@ EpakBlob * _epak_blob_new_for_blob (EpakPak *pak, struct epak_blob_entry *blob);
 
 char * epak_blob_get_content_type (EpakBlob *blob);
 GBytes * epak_blob_load_contents (EpakBlob *blob);
+GInputStream * epak_blob_get_stream (EpakBlob *blob);
 EpakBlobFlags epak_blob_get_flags (EpakBlob *blob);
 gsize epak_blob_get_content_size (EpakBlob *blob);
 
