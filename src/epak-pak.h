@@ -37,5 +37,7 @@ GSList * epak_pak_list_entries (EpakPak *self);
 
 GBytes * _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob);
 
+gsize _epak_pak_read_data (EpakPak *self, void *buf, gsize count, goffset offset);
+
 #endif /* EPAK_PAK_H */
 
