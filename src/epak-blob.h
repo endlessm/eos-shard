@@ -19,7 +19,7 @@ struct _EpakBlob {
 
 EpakBlob * _epak_blob_new_for_blob (EpakPak *pak, struct epak_blob_entry *blob);
 
-EpakBlobContentType epak_blob_get_content_type (EpakBlob *blob);
+char * epak_blob_get_content_type (EpakBlob *blob);
 EpakBlobFlags epak_blob_get_flags (EpakBlob *blob);
 
 GBytes * epak_blob_load_contents (EpakBlob *blob);
