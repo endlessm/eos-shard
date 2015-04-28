@@ -31,10 +31,39 @@ epak_blob_unref (EpakBlob *blob)
     epak_blob_free (blob);
 }
 
-EpakBlobContentType
+/**
+ * epak_blob_get_content_type 
+ *
+ * Get the content type of the blob's data.
+ *
+ * Returns: (transfer none): the mimetype of the blob
+ */
+char *
 epak_blob_get_content_type (EpakBlob *blob)
 {
-  return (EpakBlobContentType) blob->blob->content_type;
+  switch (blob->blob->content_type) {
+    case EPAK_BLOB_CONTENT_TYPE_HTML:
+      return "text/html";
+
+    case EPAK_BLOB_CONTENT_TYPE_PNG:
+      return "image/png";
+
+    case EPAK_BLOB_CONTENT_TYPE_JPG:
+      return "image/jpeg";
+
+    case EPAK_BLOB_CONTENT_TYPE_PDF:
+      return "application/pdf";
+
+    case EPAK_BLOB_CONTENT_TYPE_JSON:
+      return "application/json";
+
+    case EPAK_BLOB_CONTENT_TYPE_TEXT_PLAIN:
+      return "text/plain";
+
+    case EPAK_BLOB_CONTENT_TYPE_UNKNOWN:
+    default:
+      return "application/octet-stream";
+  }
 }
 
 EpakBlobFlags
