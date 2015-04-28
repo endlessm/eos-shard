@@ -10,6 +10,7 @@ source_public = \
 	src/epak-pak.c src/epak-pak.h \
 	src/epak-entry.c src/epak-entry.h \
 	src/epak-blob.c src/epak-blob.h \
+	src/epak-blob-stream.c src/epak-blob-stream.h \
 	src/epak-writer.c src/epak-writer.h \
 	src/epak-format.h \
 	src/epak-types.h \
@@ -17,7 +18,7 @@ source_public = \
 	$(NULL)
 
 lib_LTLIBRARIES = libepak.la
-libepak_la_CPPFLAGS = -I $(srcdir)
+libepak_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
 libepak_la_SOURCES = $(source_public)
 libepak_la_LIBADD = $(LIBEPAK_LIBS)
 

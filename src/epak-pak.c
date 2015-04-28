@@ -283,12 +283,11 @@ epak_pak_list_entries (EpakPak *self)
 GBytes *
 _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
 {
-  EpakPakPrivate *priv = epak_pak_get_instance_private(self);
   GBytes *bytes;
 
   uint8_t *buf = g_malloc (blob->size);
 
-  pread (priv->fd, buf, blob->size, priv->hdr.data_offs + blob->offs);
+  _epak_pak_read_data (self, buf, blob->size, blob->offs);
   bytes = g_bytes_new_take (buf, blob->size);
 
   uint32_t csum = adler32 (0L, NULL, 0);
@@ -319,4 +318,12 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
   }
 
   return bytes;
+}
+
+gsize
+_epak_pak_read_data (EpakPak *self, void *buf, gsize count, goffset offset)
+{
+  EpakPakPrivate *priv = epak_pak_get_instance_private (self);
+
+  return pread (priv->fd, buf, count, priv->hdr.data_offs + offset);
 }
