@@ -72,6 +72,24 @@ epak_blob_get_flags (EpakBlob *blob)
   return (EpakBlobFlags) blob->blob->flags;
 }
 
+gsize
+_epak_blob_get_actual_size (EpakBlob *blob)
+{
+  return blob->blob->size;
+}
+
+goffset
+_epak_blob_get_offset (EpakBlob *blob)
+{
+  return blob->blob->offs;
+}
+
+gsize
+epak_blob_get_content_size (EpakBlob *blob)
+{
+  return blob->blob->uncompressed_size;
+}
+
 /**
  * epak_blob_load_contents:
  *
