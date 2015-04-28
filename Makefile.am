@@ -17,7 +17,7 @@ source_public = \
 	$(NULL)
 
 lib_LTLIBRARIES = libepak.la
-libepak_la_CPPFLAGS = -I $(srcdir)
+libepak_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
 libepak_la_SOURCES = $(source_public)
 libepak_la_LIBADD = $(LIBEPAK_LIBS)
 
