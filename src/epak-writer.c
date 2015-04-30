@@ -42,22 +42,8 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
   GFileInfo *info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
   const char *ct = g_file_info_get_content_type (info);
 
-  if (strcmp (ct, "text/html") == 0)
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_HTML;
-  else if (strcmp (ct, "image/png") == 0)
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_PNG;
-  else if (strcmp (ct, "image/jpeg") == 0)
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_JPG;
-  else if (strcmp (ct, "application/pdf") == 0)
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_PDF;
-  else if (strcmp (ct, "application/json") == 0)
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_JSON;
-  else if (strcmp (ct, "text/plain") == 0)
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_TEXT_PLAIN;
-  else {
-    blob->content_type = EPAK_BLOB_CONTENT_TYPE_UNKNOWN;
-    g_warning ("Unknown content-type %s from file: %s\n", ct, g_file_info_get_name (info));
-  }
+  g_assert (strlen (ct) < sizeof (blob->content_type));
+  strcpy (blob->content_type, ct);
 
   blob->uncompressed_size = g_file_info_get_size (info);
 

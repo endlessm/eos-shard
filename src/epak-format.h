@@ -17,17 +17,6 @@ struct epak_hdr
   uint64_t data_offs;
 };
 
-typedef enum epak_blob_content_type
-{
-  EPAK_BLOB_CONTENT_TYPE_UNKNOWN,
-  EPAK_BLOB_CONTENT_TYPE_HTML,
-  EPAK_BLOB_CONTENT_TYPE_PNG,
-  EPAK_BLOB_CONTENT_TYPE_JPG,
-  EPAK_BLOB_CONTENT_TYPE_PDF,
-  EPAK_BLOB_CONTENT_TYPE_JSON,
-  EPAK_BLOB_CONTENT_TYPE_TEXT_PLAIN,
-} EpakBlobContentType;
-
 typedef enum epak_blob_flags
 {
   EPAK_BLOB_FLAG_NONE,
@@ -36,7 +25,7 @@ typedef enum epak_blob_flags
 
 struct epak_blob_entry
 {
-  uint16_t content_type;
+  char content_type[64];
   uint16_t flags;
   uint32_t adler32;
   uint64_t offs;
