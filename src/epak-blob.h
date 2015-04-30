@@ -25,6 +25,8 @@ GBytes * epak_blob_load_contents (EpakBlob *blob);
 GInputStream * epak_blob_get_stream (EpakBlob *blob);
 EpakBlobFlags epak_blob_get_flags (EpakBlob *blob);
 gsize epak_blob_get_content_size (EpakBlob *blob);
+EpakBlob * epak_blob_ref (EpakBlob *blob);
+void epak_blob_unref (EpakBlob *blob);
 
 gsize _epak_blob_get_packed_size (EpakBlob *blob);
 goffset _epak_blob_get_offset (EpakBlob *blob);

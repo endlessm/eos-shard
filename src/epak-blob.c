@@ -13,18 +13,19 @@ epak_blob_new (void)
 static void
 epak_blob_free (EpakBlob *blob)
 {
-  g_object_unref (blob->pak);
+  if (blob->pak != NULL)
+    g_object_unref (blob->pak);
   g_free (blob);
 }
 
-static EpakBlob *
+EpakBlob *
 epak_blob_ref (EpakBlob *blob)
 {
   blob->ref_count++;
   return blob;
 }
 
-static void
+void
 epak_blob_unref (EpakBlob *blob)
 {
   if (--blob->ref_count == 0)
@@ -86,6 +87,7 @@ epak_blob_get_stream (EpakBlob *blob)
   if (blob->blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
     return g_converter_input_stream_new (stream, G_CONVERTER (decompressor));
+    g_object_unref (decompressor);
   }
 
   return stream;

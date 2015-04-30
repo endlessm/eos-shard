@@ -18,7 +18,12 @@ epak_entry_new (void)
 static void
 epak_entry_free (EpakEntry *entry)
 {
-  g_object_unref (entry->pak);
+  if (entry->pak != NULL)
+    g_object_unref (entry->pak);
+  if (entry->data != NULL)
+    epak_blob_unref (entry->data);
+  if (entry->metadata != NULL)
+    epak_blob_unref (entry->metadata);
   g_free (entry);
 }
 
