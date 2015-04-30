@@ -9,9 +9,9 @@ pakw.add_entry("7d97e98f8af710c7e7fe703abc8f639e0ee507c4",
                Epak.BlobFlags.COMPRESSED_ZLIB,
                Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob"),
                Epak.BlobFlags.NONE);
-pakw.write("fart.epak");
+pakw.write("test.epak");
 
-let pak = new Epak.Pak({ path: 'fart.epak' });
+let pak = new Epak.Pak({ path: 'test.epak' });
 if (!pak.init(null))
     throw "failed to init";
 let n = pak.list_entries();

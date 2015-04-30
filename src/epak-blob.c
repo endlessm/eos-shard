@@ -13,18 +13,19 @@ epak_blob_new (void)
 static void
 epak_blob_free (EpakBlob *blob)
 {
-  g_object_unref (blob->pak);
+  if (blob->pak != NULL)
+    g_object_unref (blob->pak);
   g_free (blob);
 }
 
-static EpakBlob *
+EpakBlob *
 epak_blob_ref (EpakBlob *blob)
 {
   blob->ref_count++;
   return blob;
 }
 
-static void
+void
 epak_blob_unref (EpakBlob *blob)
 {
   if (--blob->ref_count == 0)
@@ -32,13 +33,13 @@ epak_blob_unref (EpakBlob *blob)
 }
 
 /**
- * epak_blob_get_content_type 
+ * epak_blob_get_content_type:
  *
  * Get the content type of the blob's data.
  *
- * Returns: (transfer none): the mimetype of the blob
+ * Returns: the mimetype of the blob
  */
-char *
+const char *
 epak_blob_get_content_type (EpakBlob *blob)
 {
   switch (blob->blob->content_type) {
@@ -86,6 +87,7 @@ epak_blob_get_stream (EpakBlob *blob)
   if (blob->blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
     return g_converter_input_stream_new (stream, G_CONVERTER (decompressor));
+    g_object_unref (decompressor);
   }
 
   return stream;
@@ -98,7 +100,7 @@ epak_blob_get_flags (EpakBlob *blob)
 }
 
 gsize
-_epak_blob_get_actual_size (EpakBlob *blob)
+_epak_blob_get_packed_size (EpakBlob *blob)
 {
   return blob->blob->size;
 }
@@ -120,6 +122,8 @@ epak_blob_get_content_size (EpakBlob *blob)
  *
  * Synchronously read and return the contents of this
  * blob as a #GBytes.
+ *
+ * Returns: (transfer full): the blob's data
  */
 GBytes *
 epak_blob_load_contents (EpakBlob *blob)
@@ -128,7 +132,8 @@ epak_blob_load_contents (EpakBlob *blob)
 }
 
 EpakBlob *
-_epak_blob_new_for_blob (EpakPak *pak, struct epak_blob_entry *blob_)
+_epak_blob_new_for_blob (EpakPak                *pak,
+                         struct epak_blob_entry *blob_)
 {
   EpakBlob *blob = epak_blob_new ();
   blob->pak = g_object_ref (pak);

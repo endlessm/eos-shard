@@ -20,13 +20,15 @@ struct _EpakBlob {
 
 EpakBlob * _epak_blob_new_for_blob (EpakPak *pak, struct epak_blob_entry *blob);
 
-char * epak_blob_get_content_type (EpakBlob *blob);
+const char * epak_blob_get_content_type (EpakBlob *blob);
 GBytes * epak_blob_load_contents (EpakBlob *blob);
 GInputStream * epak_blob_get_stream (EpakBlob *blob);
 EpakBlobFlags epak_blob_get_flags (EpakBlob *blob);
 gsize epak_blob_get_content_size (EpakBlob *blob);
+EpakBlob * epak_blob_ref (EpakBlob *blob);
+void epak_blob_unref (EpakBlob *blob);
 
-gsize _epak_blob_get_actual_size (EpakBlob *blob);
+gsize _epak_blob_get_packed_size (EpakBlob *blob);
 goffset _epak_blob_get_offset (EpakBlob *blob);
 
 #endif /* EPAK_BLOB_H */

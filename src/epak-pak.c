@@ -49,12 +49,16 @@ epak_pak_init_internal (GInitable *initable,
     return FALSE;
 
   priv->fd = open (priv->path, O_RDONLY);
-  if (priv->fd < 0)
+  if (priv->fd < 0) {
+    close (priv->fd);
     return FALSE;
+  }
 
   read (priv->fd, &priv->hdr, sizeof (priv->hdr));
-  if (memcmp (priv->hdr.magic, EPAK_MAGIC, sizeof (priv->hdr.magic) != 0))
+  if (memcmp (priv->hdr.magic, EPAK_MAGIC, sizeof (priv->hdr.magic) != 0)) {
+    close (priv->fd);
     return FALSE;
+  }
 
   priv->entries = g_new (struct epak_doc_entry, priv->hdr.n_docs);
 
@@ -162,7 +166,6 @@ epak_pak_init (EpakPak *pak)
 {
 }
 
-
 /**
  * epak_util_raw_name_to_hex_name:
  * @hex_name: (out caller-allocates) (array fixed-size=41 zero-terminated=1):
@@ -197,7 +200,7 @@ epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
   if (n < EPAK_HEX_NAME_SIZE)
     return FALSE;
 
-  int i = 0;
+  int i;
   for (i = 0; i < EPAK_RAW_NAME_SIZE; i++) {
     char a = hex_name[i*2];
     char b = hex_name[i*2+1];
@@ -295,6 +298,7 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
   if (csum != blob->adler32) {
     g_clear_pointer (&bytes, g_bytes_unref);
     g_warning ("Could not load blob: checksum did not match");
+    return NULL;
   }
 
   if (blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
@@ -311,8 +315,10 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
 
     GError *err = NULL;
     bytes = g_input_stream_read_bytes (out_stream, blob->uncompressed_size, NULL, &err);
-    if (err)
+    if (err) {
       g_warning ("Could not decompress stream: %s", err->message);
+      g_free (err);
+    }
 
     g_object_unref (out_stream);
   }
