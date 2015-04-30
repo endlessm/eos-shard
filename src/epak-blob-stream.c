@@ -27,8 +27,8 @@ epak_blob_stream_read (GInputStream  *stream,
   blob_stream = EPAK_BLOB_STREAM (stream);
   priv = epak_blob_stream_get_instance_private (blob_stream);
 
-  blob_offset = _epak_blob_get_offset(priv->blob);
-  actual_count = MIN (count, _epak_blob_get_actual_size (priv->blob) - priv->pos);
+  blob_offset = _epak_blob_get_offset (priv->blob);
+  actual_count = MIN (count, _epak_blob_get_packed_size (priv->blob) - priv->pos);
 
   size_read = _epak_pak_read_data (priv->pak, buffer, actual_count, blob_offset + priv->pos);
   priv->pos += size_read;

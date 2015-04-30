@@ -162,7 +162,6 @@ epak_pak_init (EpakPak *pak)
 {
 }
 
-
 /**
  * epak_util_raw_name_to_hex_name:
  * @hex_name: (out caller-allocates) (array fixed-size=41 zero-terminated=1):
@@ -197,7 +196,7 @@ epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
   if (n < EPAK_HEX_NAME_SIZE)
     return FALSE;
 
-  int i = 0;
+  int i;
   for (i = 0; i < EPAK_RAW_NAME_SIZE; i++) {
     char a = hex_name[i*2];
     char b = hex_name[i*2+1];

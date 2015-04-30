@@ -32,13 +32,13 @@ epak_blob_unref (EpakBlob *blob)
 }
 
 /**
- * epak_blob_get_content_type 
+ * epak_blob_get_content_type:
  *
  * Get the content type of the blob's data.
  *
- * Returns: (transfer none): the mimetype of the blob
+ * Returns: the mimetype of the blob
  */
-char *
+const char *
 epak_blob_get_content_type (EpakBlob *blob)
 {
   switch (blob->blob->content_type) {
@@ -98,7 +98,7 @@ epak_blob_get_flags (EpakBlob *blob)
 }
 
 gsize
-_epak_blob_get_actual_size (EpakBlob *blob)
+_epak_blob_get_packed_size (EpakBlob *blob)
 {
   return blob->blob->size;
 }
@@ -120,6 +120,8 @@ epak_blob_get_content_size (EpakBlob *blob)
  *
  * Synchronously read and return the contents of this
  * blob as a #GBytes.
+ *
+ * Returns: (transfer full): the blob's data
  */
 GBytes *
 epak_blob_load_contents (EpakBlob *blob)
@@ -128,7 +130,8 @@ epak_blob_load_contents (EpakBlob *blob)
 }
 
 EpakBlob *
-_epak_blob_new_for_blob (EpakPak *pak, struct epak_blob_entry *blob_)
+_epak_blob_new_for_blob (EpakPak                *pak,
+                         struct epak_blob_entry *blob_)
 {
   EpakBlob *blob = epak_blob_new ();
   blob->pak = g_object_ref (pak);
