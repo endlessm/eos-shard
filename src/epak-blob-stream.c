@@ -44,12 +44,6 @@ epak_blob_stream_close (GInputStream  *stream,
 }
 
 static void
-epak_blob_stream_finalize (GObject *object)
-{
-  G_OBJECT_CLASS (epak_blob_stream_parent_class)->finalize (object);
-}
-
-static void
 epak_blob_stream_dispose (GObject *object)
 {
   EpakBlobStream *blob_stream;
@@ -58,7 +52,7 @@ epak_blob_stream_dispose (GObject *object)
   blob_stream = EPAK_BLOB_STREAM (object);
   priv = epak_blob_stream_get_instance_private (blob_stream);
 
-  g_clear_object (&priv->blob);
+  g_clear_pointer (&priv->blob, epak_blob_unref);
   g_clear_object (&priv->pak);
 
   G_OBJECT_CLASS (epak_blob_stream_parent_class)->dispose (object);
@@ -71,7 +65,6 @@ epak_blob_stream_class_init (EpakBlobStreamClass *klass)
   GInputStreamClass *istream_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
-  gobject_class->finalize = epak_blob_stream_finalize;
   gobject_class->dispose = epak_blob_stream_dispose;
 
   istream_class = G_INPUT_STREAM_CLASS (klass);
@@ -94,8 +87,8 @@ _epak_blob_stream_new_for_blob (EpakBlob *blob,
   blob_stream = g_object_new (EPAK_TYPE_BLOB_STREAM, NULL);
   priv = epak_blob_stream_get_instance_private (blob_stream);
 
-  priv->blob = g_object_ref (priv->blob);
-  priv->pak = g_object_ref (priv->pak);
+  priv->blob = epak_blob_ref (blob);
+  priv->pak = g_object_ref (pak);
 
   return blob_stream;
 }
