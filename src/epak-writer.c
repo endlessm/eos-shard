@@ -50,6 +50,19 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
   g_object_unref (info);
 }
 
+/**
+ * epak_writer_add_entry:
+ * @writer: a EpakWriter
+ * @hex_name: the hexadecimal string which will act as this entry's ID
+ * @metadata: a #GFile pointing to the entry's metadata on disk
+ * @metadata_flags: an #EpakBlobFlags to be applied to the metadata
+ * @data: a #GFile pointing to the entry's data on disk
+ * @data_flags: an #EpakBlobFlags to be applied to the data
+ *
+ * Adds a data/metadata file pair to the epak. These pairs must be added in
+ * increasing hex_name order. Once all pairs have been added, call
+ * epak_writer_write to save the epak to disk.
+ */
 void
 epak_writer_add_entry (EpakWriter *writer,
                        char *hex_name,

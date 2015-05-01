@@ -70,6 +70,15 @@ epak_blob_get_stream (EpakBlob *blob)
   return stream;
 }
 
+/**
+ * epak_blob_get_flags:
+ *
+ * Currently, the only flag is one which indicates whether the content is
+ * compressed. Since the two blob read methods decompress content
+ * automatically, this method is really only useful internally.
+ *
+ * Returns: the blob's #EpakBlobFlags
+ */
 EpakBlobFlags
 epak_blob_get_flags (EpakBlob *blob)
 {
@@ -88,6 +97,13 @@ _epak_blob_get_offset (EpakBlob *blob)
   return blob->blob->offs;
 }
 
+/**
+ * epak_blob_get_content_size:
+ *
+ * Gives the blob's uncompressed content size.
+ *
+ * Returns: the blob's content size in bytes
+ */
 gsize
 epak_blob_get_content_size (EpakBlob *blob)
 {
