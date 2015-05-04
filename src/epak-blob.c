@@ -57,17 +57,19 @@ epak_blob_get_content_type (EpakBlob *blob)
 GInputStream *
 epak_blob_get_stream (EpakBlob *blob)
 {
-  GInputStream *stream;
+  GInputStream *blob_stream, *converter_stream;
   GZlibDecompressor *decompressor;
 
-  stream = G_INPUT_STREAM (_epak_blob_stream_new_for_blob (blob, blob->pak));
+  blob_stream = G_INPUT_STREAM (_epak_blob_stream_new_for_blob (blob, blob->pak));
   if (blob->blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
-    return g_converter_input_stream_new (stream, G_CONVERTER (decompressor));
+    converter_stream = g_converter_input_stream_new (blob_stream, G_CONVERTER (decompressor));
+    g_object_unref (blob_stream);
     g_object_unref (decompressor);
+    return converter_stream;
   }
 
-  return stream;
+  return blob_stream;
 }
 
 /**

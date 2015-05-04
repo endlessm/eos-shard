@@ -12,7 +12,8 @@ struct epak_writer_doc_entry
 {
   struct epak_doc_entry base;
 
-  GFile *metadata_file, *data_file;
+  GFile *metadata_file;
+  GFile *data_file;
 };
 
 struct _EpakWriterPrivate
@@ -92,7 +93,8 @@ epak_writer_add_entry (EpakWriter *writer,
 }
 
 static void
-write_blob (int fd, int data_offs,
+write_blob (int fd,
+            int data_offs,
             struct epak_blob_entry *blob,
             GFile *file)
 {
@@ -103,6 +105,7 @@ write_blob (int fd, int data_offs,
     GZlibCompressor *compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
     stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
     g_object_unref (file_stream);
+    g_object_unref (compressor);
   } else {
     stream = G_INPUT_STREAM (file_stream);
   }

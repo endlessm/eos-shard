@@ -50,7 +50,6 @@ epak_pak_init_internal (GInitable *initable,
 
   priv->fd = open (priv->path, O_RDONLY);
   if (priv->fd < 0) {
-    close (priv->fd);
     return FALSE;
   }
 
@@ -123,20 +122,10 @@ epak_pak_finalize (GObject *object)
   EpakPak *pak = EPAK_PAK (object);
   EpakPakPrivate *priv = epak_pak_get_instance_private (pak);
 
+  close (priv->fd);
   g_clear_pointer (&priv->path, g_free);
 
   G_OBJECT_CLASS (epak_pak_parent_class)->finalize (object);
-}
-
-static void
-epak_pak_dispose (GObject *object)
-{
-  EpakPak *pak = EPAK_PAK (object);
-  EpakPakPrivate *priv = epak_pak_get_instance_private (pak);
-
-  close (priv->fd);
-
-  G_OBJECT_CLASS (epak_pak_parent_class)->dispose (object);
 }
 
 static void
@@ -145,7 +134,6 @@ epak_pak_class_init (EpakPakClass *klass)
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
   gobject_class->finalize = epak_pak_finalize;
-  gobject_class->dispose = epak_pak_dispose;
   gobject_class->set_property = epak_pak_set_property;
   gobject_class->get_property = epak_pak_get_property;
 
@@ -315,9 +303,9 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
 
     GError *err = NULL;
     bytes = g_input_stream_read_bytes (out_stream, blob->uncompressed_size, NULL, &err);
-    if (err) {
+    if (err != NULL) {
       g_warning ("Could not decompress stream: %s", err->message);
-      g_free (err);
+      g_error_free (err);
     }
 
     g_object_unref (out_stream);
