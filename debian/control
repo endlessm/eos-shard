@@ -1,0 +1,21 @@
+Source: epak
+Priority: standard
+Maintainer: Jasper St. Pierre <jasper@endlessm.com>
+Build-Depends: autotools-dev,
+               debhelper (>= 8.0.0),
+               gir1.2-glib-2.0,
+               gobject-introspection (>= 0.9.7),
+               gtk-doc-tools (>= 1.18),
+               libgirepository1.0-dev,
+               zlib-dev
+Standards-Version: 3.9.4
+Section: non-free/libs
+Homepage: http://www.endlessm.com
+
+Package: gir1.2-epak-1.0
+Section: non-free/libdevel
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Description: GObject bindings for epak
+ Epak is a library for generating and extracting epak archives.
