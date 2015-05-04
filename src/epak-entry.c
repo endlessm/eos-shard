@@ -52,7 +52,7 @@ epak_entry_unref (EpakEntry *entry)
 uint8_t *
 epak_entry_get_raw_name (EpakEntry *entry)
 {
-  return (uint8_t*) entry->doc->raw_name;
+  return (uint8_t *) entry->doc->raw_name;
 }
 
 /**

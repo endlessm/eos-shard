@@ -12,7 +12,8 @@ struct epak_writer_doc_entry
 {
   struct epak_doc_entry base;
 
-  GFile *metadata_file, *data_file;
+  GFile *metadata_file;
+  GFile *data_file;
 };
 
 struct _EpakWriterPrivate
@@ -92,7 +93,8 @@ epak_writer_add_entry (EpakWriter *writer,
 }
 
 static void
-write_blob (int fd, int data_offs,
+write_blob (int fd,
+            int data_offs,
             struct epak_blob_entry *blob,
             GFile *file)
 {

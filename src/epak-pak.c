@@ -315,9 +315,9 @@ _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
 
     GError *err = NULL;
     bytes = g_input_stream_read_bytes (out_stream, blob->uncompressed_size, NULL, &err);
-    if (err) {
+    if (err != NULL) {
       g_warning ("Could not decompress stream: %s", err->message);
-      g_free (err);
+      g_error_free (err);
     }
 
     g_object_unref (out_stream);
