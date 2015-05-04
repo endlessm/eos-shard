@@ -103,6 +103,7 @@ write_blob (int fd, int data_offs,
     GZlibCompressor *compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
     stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
     g_object_unref (file_stream);
+    g_object_unref (compressor);
   } else {
     stream = G_INPUT_STREAM (file_stream);
   }
