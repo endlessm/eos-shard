@@ -32,7 +32,7 @@ Epak_1_0_gir_FILES = $(source_public)
 Epak_1_0_gir_SCANNERFLAGS = --identifier-prefix=epak_ --identifier-prefix=Epak
 CLEANFILES += Epak-1.0.gir Epak-1.0.typelib
 
-EXTRA_DIST = debian
+EXTRA_DIST = debian README.md
 
 girdir = $(datadir)/gir-1.0
 gir_DATA = Epak-1.0.gir
