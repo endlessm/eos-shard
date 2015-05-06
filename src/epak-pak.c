@@ -272,7 +272,7 @@ epak_pak_list_entries (EpakPak *self)
 }
 
 GBytes *
-_epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
+_epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob, GError **error)
 {
   GBytes *bytes;
 

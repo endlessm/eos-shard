@@ -35,7 +35,9 @@ EpakEntry * epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name);
 EpakEntry * epak_pak_find_entry_by_hex_name (EpakPak *self, char *hex_name);
 GSList * epak_pak_list_entries (EpakPak *self);
 
-GBytes * _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob);
+GBytes * _epak_pak_load_blob (EpakPak                 *self,
+                              struct epak_blob_entry  *blob,
+                              GError                 **error);
 
 gsize _epak_pak_read_data (EpakPak *self, void *buf, gsize count, goffset offset);
 

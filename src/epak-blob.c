@@ -123,7 +123,7 @@ epak_blob_get_content_size (EpakBlob *blob)
 GBytes *
 epak_blob_load_contents (EpakBlob *blob)
 {
-  return _epak_pak_load_blob (blob->pak, blob->blob);
+  return _epak_pak_load_blob (blob->pak, blob->blob, NULL);
 }
 
 EpakBlob *
