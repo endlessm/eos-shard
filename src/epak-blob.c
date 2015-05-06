@@ -13,8 +13,7 @@ epak_blob_new (void)
 static void
 epak_blob_free (EpakBlob *blob)
 {
-  if (blob->pak != NULL)
-    g_object_unref (blob->pak);
+  g_clear_object (&blob->pak);
   g_free (blob);
 }
 
