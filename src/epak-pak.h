@@ -1,3 +1,21 @@
+/* Copyright 2015 Endless Mobile, Inc. */
+
+/* This file is part of epak.
+ *
+ * epak is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * epak is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with epak.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef EPAK_PAK_H
 #define EPAK_PAK_H
@@ -31,11 +49,13 @@ GType epak_pak_get_type (void) G_GNUC_CONST;
 void epak_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name);
 gboolean epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name);
 
-EpakEntry * epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name);
-EpakEntry * epak_pak_find_entry_by_hex_name (EpakPak *self, char *hex_name);
-GSList * epak_pak_list_entries (EpakPak *self);
+EpakRecord * epak_pak_find_record_by_raw_name (EpakPak *self, uint8_t *raw_name);
+EpakRecord * epak_pak_find_record_by_hex_name (EpakPak *self, char *hex_name);
+GSList * epak_pak_list_records (EpakPak *self);
 
-GBytes * _epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob);
+GBytes * _epak_pak_load_blob (EpakPak                 *self,
+                              struct epak_blob_entry  *blob,
+                              GError                 **error);
 
 gsize _epak_pak_read_data (EpakPak *self, void *buf, gsize count, goffset offset);
 

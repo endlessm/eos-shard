@@ -1,3 +1,21 @@
+/* Copyright 2015 Endless Mobile, Inc. */
+
+/* This file is part of epak.
+ *
+ * epak is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * epak is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with epak.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
 
 #include "epak-pak.h"
 
@@ -7,7 +25,7 @@
 #include <string.h>
 #include <zlib.h>
 
-#include "epak-entry.h"
+#include "epak-record.h"
 
 #include "epak-format.h"
 #include "epak-utils.h"
@@ -16,7 +34,7 @@ struct _EpakPakPrivate
 {
   int fd;
   struct epak_hdr hdr;
-  struct epak_doc_entry *entries;
+  struct epak_record_entry *entries;
   char *path;
 };
 
@@ -59,13 +77,13 @@ epak_pak_init_internal (GInitable *initable,
     return FALSE;
   }
 
-  priv->entries = g_new (struct epak_doc_entry, priv->hdr.n_docs);
+  priv->entries = g_new (struct epak_record_entry, priv->hdr.n_records);
 
   lalign (priv->fd);
 
   int i;
-  for (i = 0; i < priv->hdr.n_docs; i++)
-    read (priv->fd, &priv->entries[i], sizeof (struct epak_doc_entry));
+  for (i = 0; i < priv->hdr.n_records; i++)
+    read (priv->fd, &priv->entries[i], sizeof (struct epak_record_entry));
 
   lalign (priv->fd);
 
@@ -201,78 +219,78 @@ epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
 }
 
 static int
-epak_doc_entry_cmp (const void *a_, const void *b_)
+epak_record_entry_cmp (const void *a_, const void *b_)
 {
-  const struct epak_doc_entry *a = a_;
-  const struct epak_doc_entry *b = b_;
+  const struct epak_record_entry *a = a_;
+  const struct epak_record_entry *b = b_;
   return memcmp (a->raw_name, b->raw_name, EPAK_RAW_NAME_SIZE);
 }
 
 /**
- * epak_pak_find_entry_by_raw_name:
+ * epak_pak_find_record_by_raw_name:
  *
- * Finds a #EpakEntry for the given raw name
+ * Finds a #EpakRecord for the given raw name
  *
- * Returns: (transfer full): the #EpakEntry with the given raw name
+ * Returns: (transfer full): the #EpakRecord with the given raw name
  */
-EpakEntry *
-epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name)
+EpakRecord *
+epak_pak_find_record_by_raw_name (EpakPak *self, uint8_t *raw_name)
 {
-  struct epak_doc_entry key = { };
+  struct epak_record_entry key = { };
   memcpy (key.raw_name, raw_name, EPAK_RAW_NAME_SIZE);
 
-  EpakPakPrivate *priv = epak_pak_get_instance_private(self);
+  EpakPakPrivate *priv = epak_pak_get_instance_private (self);
 
-  struct epak_doc_entry *entry;
+  struct epak_record_entry *entry;
   entry = bsearch (&key,
-                   priv->entries, priv->hdr.n_docs,
-                   sizeof (struct epak_doc_entry),
-                   epak_doc_entry_cmp);
-  return _epak_entry_new_for_doc (self, entry);
+                   priv->entries, priv->hdr.n_records,
+                   sizeof (struct epak_record_entry),
+                   epak_record_entry_cmp);
+  return _epak_record_new_for_record_entry (self, entry);
 }
 
 /**
- * epak_pak_find_entry_by_hex_name:
+ * epak_pak_find_record_by_hex_name:
  *
- * Finds a #EpakEntry for the given hex name
+ * Finds a #EpakRecord for the given hex name
  *
- * Returns: (transfer full): the #EpakEntry with the given hex name
+ * Returns: (transfer full): the #EpakRecord with the given hex name
  */
-EpakEntry *
-epak_pak_find_entry_by_hex_name (EpakPak *self, char *hex_name)
+EpakRecord *
+epak_pak_find_record_by_hex_name (EpakPak *self, char *hex_name)
 {
   uint8_t raw_name[EPAK_RAW_NAME_SIZE];
 
   if (!epak_util_hex_name_to_raw_name (raw_name, hex_name))
     return NULL;
 
-  return epak_pak_find_entry_by_raw_name (self, raw_name);
+  return epak_pak_find_record_by_raw_name (self, raw_name);
 }
 
 /**
- * epak_pak_list_entries:
+ * epak_pak_list_records:
  *
  * List all entries inside @self.
  *
- * Returns: (transfer full) (element-type EpakEntry): a list of #EpakEntry
+ * Returns: (transfer full) (element-type EpakRecord): a list of #EpakRecord
  */
 GSList *
-epak_pak_list_entries (EpakPak *self)
+epak_pak_list_records (EpakPak *self)
 {
   EpakPakPrivate *priv = epak_pak_get_instance_private (self);
   GSList *l = NULL;
   int i;
 
-  for (i = priv->hdr.n_docs - 1; i >= 0; i--) {
-    struct epak_doc_entry *entry = &priv->entries[i];
-    l = g_slist_prepend (l, _epak_entry_new_for_doc (self, entry));
+  for (i = priv->hdr.n_records - 1; i >= 0; i--) {
+    struct epak_record_entry *entry = &priv->entries[i];
+    l = g_slist_prepend (l, _epak_record_new_for_record_entry (self, entry));
   }
 
   return l;
 }
 
 GBytes *
-_epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob)
+_epak_pak_load_blob (EpakPak *self, struct epak_blob_entry *blob, GError **error)
 {
   GBytes *bytes;
 

@@ -1,3 +1,21 @@
+/* Copyright 2015 Endless Mobile, Inc. */
+
+/* This file is part of epak.
+ *
+ * epak is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * epak is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with epak.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
 
 #include "epak-writer.h"
 
@@ -8,9 +26,9 @@
 #include "epak-pak.h"
 #include "epak-utils.h"
 
-struct epak_writer_doc_entry
+struct epak_writer_record_entry
 {
-  struct epak_doc_entry base;
+  struct epak_record_entry base;
 
   GFile *metadata_file;
   GFile *data_file;
@@ -25,8 +43,27 @@ typedef struct _EpakWriterPrivate EpakWriterPrivate;
 G_DEFINE_TYPE_WITH_PRIVATE (EpakWriter, epak_writer, G_TYPE_OBJECT);
 
 static void
+epak_writer_finalize (GObject *object)
+{
+  EpakWriter *writer;
+  EpakWriterPrivate *priv;
+
+  writer = EPAK_WRITER (object);
+  priv = epak_writer_get_instance_private (writer);
+
+  if (priv->entries != NULL)
+    g_array_unref (priv->entries);
+
+  G_OBJECT_CLASS (epak_writer_parent_class)->dispose (object);
+}
+
+static void
 epak_writer_class_init (EpakWriterClass *klass)
 {
+  GObjectClass *gobject_class;
+
+  gobject_class = G_OBJECT_CLASS (klass);
+  gobject_class->finalize = epak_writer_finalize;
 }
 
 static void
@@ -34,7 +71,7 @@ epak_writer_init (EpakWriter *writer)
 {
   EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
 
-  priv->entries = g_array_new (FALSE, TRUE, sizeof (struct epak_writer_doc_entry));
+  priv->entries = g_array_new (FALSE, TRUE, sizeof (struct epak_writer_record_entry));
 }
 
 static void
@@ -52,7 +89,7 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
 }
 
 /**
- * epak_writer_add_entry:
+ * epak_writer_add_record:
  * @writer: a EpakWriter
  * @hex_name: the hexadecimal string which will act as this entry's ID
  * @metadata: a #GFile pointing to the entry's metadata on disk
@@ -65,7 +102,7 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
  * epak_writer_write to save the epak to disk.
  */
 void
-epak_writer_add_entry (EpakWriter *writer,
+epak_writer_add_record (EpakWriter *writer,
                        char *hex_name,
                        GFile *metadata,
                        EpakBlobFlags metadata_flags,
@@ -73,23 +110,23 @@ epak_writer_add_entry (EpakWriter *writer,
                        EpakBlobFlags data_flags)
 {
   EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
-  struct epak_writer_doc_entry doc = {};
+  struct epak_writer_record_entry record_entry = {};
 
-  epak_util_hex_name_to_raw_name (doc.base.raw_name, hex_name);
+  epak_util_hex_name_to_raw_name (record_entry.base.raw_name, hex_name);
 
   if (priv->entries->len > 0) {
-    struct epak_writer_doc_entry *e = &g_array_index (priv->entries, struct epak_writer_doc_entry, priv->entries->len - 1);
-    g_assert (memcmp (doc.base.raw_name, e->base.raw_name, EPAK_RAW_NAME_SIZE) > 0);
+    struct epak_writer_record_entry *e = &g_array_index (priv->entries, struct epak_writer_record_entry, priv->entries->len - 1);
+    g_assert (memcmp (record_entry.base.raw_name, e->base.raw_name, EPAK_RAW_NAME_SIZE) > 0);
   }
 
-  doc.metadata_file = metadata;
-  doc.base.metadata.flags = metadata_flags;
-  fill_blob_entry_from_gfile (&doc.base.metadata, metadata);
-  doc.data_file = data;
-  doc.base.data.flags = data_flags;
-  fill_blob_entry_from_gfile (&doc.base.data, data);
+  record_entry.metadata_file = metadata;
+  record_entry.base.metadata.flags = metadata_flags;
+  fill_blob_entry_from_gfile (&record_entry.base.metadata, metadata);
+  record_entry.data_file = data;
+  record_entry.base.data.flags = data_flags;
+  fill_blob_entry_from_gfile (&record_entry.base.data, data);
 
-  g_array_append_val (priv->entries, doc);
+  g_array_append_val (priv->entries, record_entry);
 }
 
 static void
@@ -136,8 +173,8 @@ epak_writer_write (EpakWriter *writer,
   int entry_offs;
 
   memcpy (hdr.magic, EPAK_MAGIC, sizeof (hdr.magic));
-  hdr.n_docs = priv->entries->len;
-  hdr.data_offs = ALIGN (ALIGN (sizeof (hdr)) + sizeof (struct epak_doc_entry) * hdr.n_docs);
+  hdr.n_records = priv->entries->len;
+  hdr.data_offs = ALIGN (ALIGN (sizeof (hdr)) + sizeof (struct epak_record_entry) * hdr.n_records);
   write (fd, &hdr, sizeof (hdr));
 
   entry_offs = lalign (fd);
@@ -145,7 +182,7 @@ epak_writer_write (EpakWriter *writer,
 
   int i;
   for (i = 0; i < priv->entries->len; i++) {
-    struct epak_writer_doc_entry *e = &g_array_index (priv->entries, struct epak_writer_doc_entry, i);
+    struct epak_writer_record_entry *e = &g_array_index (priv->entries, struct epak_writer_record_entry, i);
 
     write_blob (fd, hdr.data_offs, &e->base.metadata, e->metadata_file);
     write_blob (fd, hdr.data_offs, &e->base.data, e->data_file);
@@ -154,9 +191,9 @@ epak_writer_write (EpakWriter *writer,
   lseek (fd, entry_offs, SEEK_SET);
 
   for (i = 0; i < priv->entries->len; i++) {
-    struct epak_writer_doc_entry *e = &g_array_index (priv->entries, struct epak_writer_doc_entry, i);
-    struct epak_doc_entry *doc = &e->base;
-    write (fd, doc, sizeof (*doc));
+    struct epak_writer_record_entry *e = &g_array_index (priv->entries, struct epak_writer_record_entry, i);
+    struct epak_record_entry *record_entry = &e->base;
+    write (fd, record_entry, sizeof (*record_entry));
   }
 
   close (fd);

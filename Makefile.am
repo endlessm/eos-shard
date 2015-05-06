@@ -1,3 +1,20 @@
+## Copyright 2015 Endless Mobile, Inc.
+
+## This file is part of epak.
+##
+## epak is free software: you can redistribute it and/or modify
+## it under the terms of the GNU Lesser General Public License as published
+## by the Free Software Foundation, either version 2.1 of the License, or
+## (at your option) any later version.
+##
+## epak is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with epak.  If not, see
+## <http://www.gnu.org/licenses/>.
 
 CLEANFILES =
 
@@ -8,7 +25,7 @@ INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 source_public = \
 	src/epak-pak.c src/epak-pak.h \
-	src/epak-entry.c src/epak-entry.h \
+	src/epak-record.c src/epak-record.h \
 	src/epak-blob.c src/epak-blob.h \
 	src/epak-blob-stream.c src/epak-blob-stream.h \
 	src/epak-writer.c src/epak-writer.h \
