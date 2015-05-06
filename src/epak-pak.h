@@ -33,6 +33,13 @@
 #define EPAK_IS_PAK_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  EPAK_TYPE_PAK))
 #define EPAK_PAK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  EPAK_TYPE_PAK, EpakPakClass))
 
+/**
+ * EpakPak:
+ *
+ * A handle to an epak file. Allows for fast lookups of #EpakRecords based on
+ * their hex name.
+ **/
+
 typedef struct _EpakPak        EpakPak;
 typedef struct _EpakPakClass   EpakPakClass;
 

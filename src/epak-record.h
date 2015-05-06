@@ -25,6 +25,13 @@
 
 #include "epak-types.h"
 
+/**
+ * EpakRecord:
+ *
+ * A particular data/metadata pair. Generally, a record will have some content
+ * stored as data, as well as some JSON-formatted metadata about that content.
+ **/
+
 GType epak_record_get_type (void) G_GNUC_CONST;
 
 struct _EpakRecord {

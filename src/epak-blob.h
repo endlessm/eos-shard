@@ -27,6 +27,17 @@
 #include "epak-blob-stream.h"
 #include "epak-format.h"
 
+/**
+ * EpakBlob:
+ *
+ * A handle to either a record's data or metadata. Contains information about
+ * the underlying content's MIME type, size, and whether it's compressed or
+ * not.
+ *
+ * If the content is compressed, its #EpakBlobStream will be automatically
+ * piped through a #GZlibDecompressor.
+ **/
+
 GType epak_blob_get_type (void) G_GNUC_CONST;
 
 struct _EpakBlob {

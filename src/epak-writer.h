@@ -30,6 +30,15 @@
 #define EPAK_IS_WRITER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  EPAK_TYPE_WRITER))
 #define EPAK_WRITER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  EPAK_TYPE_WRITER, EpakWriterClass))
 
+/**
+ * EpakWriter:
+ *
+ * An object for packing file into an epak file. Records are added as pairs of
+ * data/metadata, and are tagged with a unique 40 character hex name.
+ *
+ * Files must be added in increasing order based on their name.
+ */
+
 typedef struct _EpakWriter        EpakWriter;
 typedef struct _EpakWriterClass   EpakWriterClass;
 

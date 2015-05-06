@@ -32,6 +32,12 @@
 #define EPAK_IS_BLOB_STREAM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  EPAK_TYPE_BLOB_STREAM))
 #define EPAK_BLOB_STREAM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  EPAK_TYPE_BLOB_STREAM, EpakBlobStreamClass))
 
+/**
+ * EpakBlobStream:
+ *
+ * A #GInputStream to an #EpakBlob's content.
+ */
+
 typedef struct _EpakBlobStream        EpakBlobStream;
 typedef struct _EpakBlobStreamClass   EpakBlobStreamClass;
 
