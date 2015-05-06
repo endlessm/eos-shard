@@ -1,3 +1,20 @@
+dnl Copyright 2015 Endless Mobile, Inc.
+
+dnl This file is part of epak.
+dnl
+dnl epak is free software: you can redistribute it and/or modify
+dnl it under the terms of the GNU Lesser General Public License as published
+dnl by the Free Software Foundation, either version 2.1 of the License, or
+dnl (at your option) any later version.
+dnl
+dnl epak is distributed in the hope that it will be useful,
+dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+dnl GNU Lesser General Public License for more details.
+dnl
+dnl You should have received a copy of the GNU Lesser General Public
+dnl License along with epak.  If not, see
+dnl <http://www.gnu.org/licenses/>.
 
 AC_INIT([eos-packfile], [0],
     [], [eos-packfile], [http://endlessm.com])
