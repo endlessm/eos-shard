@@ -27,12 +27,12 @@ struct _EpakWriterClass
 
 GType epak_writer_get_type (void) G_GNUC_CONST;
 
-void epak_writer_add_entry (EpakWriter *writer,
-                            char *hex_name,
-                            GFile *metadata,
-                            EpakBlobFlags metadata_flags,
-                            GFile *data,
-                            EpakBlobFlags data_flags);
+void epak_writer_add_record (EpakWriter *writer,
+                             char *hex_name,
+                             GFile *metadata,
+                             EpakBlobFlags metadata_flags,
+                             GFile *data,
+                             EpakBlobFlags data_flags);
 void epak_writer_write (EpakWriter *writer,
                         char *path);
 

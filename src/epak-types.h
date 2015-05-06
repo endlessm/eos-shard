@@ -3,7 +3,7 @@
 #define EPAK_TYPES_H
 
 typedef struct _EpakPak EpakPak;
-typedef struct _EpakEntry EpakEntry;
+typedef struct _EpakRecord EpakRecord;
 typedef struct _EpakBlob EpakBlob;
 typedef struct _EpakBlobStream EpakBlobStream;
 

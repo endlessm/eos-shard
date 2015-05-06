@@ -13,7 +13,7 @@
 struct epak_hdr
 {
   char magic[4];
-  uint32_t n_docs;
+  uint32_t n_records;
   uint64_t data_offs;
 };
 
@@ -36,7 +36,7 @@ struct epak_blob_entry
 #define EPAK_RAW_NAME_SIZE 20
 #define EPAK_HEX_NAME_SIZE (EPAK_RAW_NAME_SIZE*2)
 
-struct epak_doc_entry
+struct epak_record_entry
 {
   uint8_t raw_name[EPAK_RAW_NAME_SIZE];
   struct epak_blob_entry metadata;

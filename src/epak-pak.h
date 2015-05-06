@@ -31,9 +31,9 @@ GType epak_pak_get_type (void) G_GNUC_CONST;
 void epak_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name);
 gboolean epak_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name);
 
-EpakEntry * epak_pak_find_entry_by_raw_name (EpakPak *self, uint8_t *raw_name);
-EpakEntry * epak_pak_find_entry_by_hex_name (EpakPak *self, char *hex_name);
-GSList * epak_pak_list_entries (EpakPak *self);
+EpakRecord * epak_pak_find_record_by_raw_name (EpakPak *self, uint8_t *raw_name);
+EpakRecord * epak_pak_find_record_by_hex_name (EpakPak *self, char *hex_name);
+GSList * epak_pak_list_records (EpakPak *self);
 
 GBytes * _epak_pak_load_blob (EpakPak                 *self,
                               struct epak_blob_entry  *blob,

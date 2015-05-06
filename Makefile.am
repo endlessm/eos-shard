@@ -8,7 +8,7 @@ INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 source_public = \
 	src/epak-pak.c src/epak-pak.h \
-	src/epak-entry.c src/epak-entry.h \
+	src/epak-record.c src/epak-record.h \
 	src/epak-blob.c src/epak-blob.h \
 	src/epak-blob-stream.c src/epak-blob-stream.h \
 	src/epak-writer.c src/epak-writer.h \
