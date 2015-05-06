@@ -25,8 +25,27 @@ typedef struct _EpakWriterPrivate EpakWriterPrivate;
 G_DEFINE_TYPE_WITH_PRIVATE (EpakWriter, epak_writer, G_TYPE_OBJECT);
 
 static void
+epak_writer_finalize (GObject *object)
+{
+  EpakWriter *writer;
+  EpakWriterPrivate *priv;
+
+  writer = EPAK_WRITER (object);
+  priv = epak_writer_get_instance_private (writer);
+
+  if (priv->entries != NULL)
+    g_array_unref (priv->entries);
+
+  G_OBJECT_CLASS (epak_writer_parent_class)->dispose (object);
+}
+
+static void
 epak_writer_class_init (EpakWriterClass *klass)
 {
+  GObjectClass *gobject_class;
+
+  gobject_class = G_OBJECT_CLASS (klass);
+  gobject_class->finalize = epak_writer_finalize;
 }
 
 static void
