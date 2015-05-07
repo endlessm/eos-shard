@@ -27,7 +27,7 @@ Depends: libepak-0-0 (= ${binary:Version}),
          ${shlibs:Depends}
 Description: epak headers and development files
 
-Package: gir1.2-epak-1.0
+Package: gir1.2-epak-0
 Section: non-free/introspection
 Architecture: any
 Depends: libepak-0-0 (= ${binary:Version}),

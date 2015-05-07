@@ -20,7 +20,7 @@ CLEANFILES =
 
 AM_CFLAGS = $(LIBEPAK_CFLAGS)
 
-INTROSPECTION_GIRS = Epak-1.0.gir
+INTROSPECTION_GIRS = Epak-0.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 epak_headers = \
@@ -51,17 +51,17 @@ libepak_la_LIBADD = $(LIBEPAK_LIBS)
 
 include $(INTROSPECTION_MAKEFILE)
 
-Epak-1.0.gir: libepak.la
-Epak_1_0_gir_INCLUDES = GLib-2.0 Gio-2.0
-Epak_1_0_gir_CFLAGS = $(AM_CFLAGS)
-Epak_1_0_gir_LIBS = libepak.la
-Epak_1_0_gir_FILES = $(epak_headers) $(epak_sources)
-Epak_1_0_gir_SCANNERFLAGS = --identifier-prefix=epak_ --identifier-prefix=Epak
-CLEANFILES += Epak-1.0.gir Epak-1.0.typelib
+Epak-0.gir: libepak.la
+Epak_0_gir_INCLUDES = GLib-2.0 Gio-2.0
+Epak_0_gir_CFLAGS = $(AM_CFLAGS)
+Epak_0_gir_LIBS = libepak.la
+Epak_0_gir_FILES = $(epak_headers) $(epak_sources)
+Epak_0_gir_SCANNERFLAGS = --identifier-prefix=epak_ --identifier-prefix=Epak
+CLEANFILES += Epak-0.gir Epak-0.typelib
 
 EXTRA_DIST = debian README.md
 
 girdir = $(datadir)/gir-1.0
-gir_DATA = Epak-1.0.gir
+gir_DATA = Epak-0.gir
 typelibdir = $(libdir)/girepository-1.0
-typelib_DATA = Epak-1.0.typelib
+typelib_DATA = Epak-0.typelib
