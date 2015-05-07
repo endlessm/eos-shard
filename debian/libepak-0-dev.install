@@ -1,0 +1,3 @@
+usr/include/epak*/*
+usr/lib/libepak*.so
+usr/share/gir-1.0/Epak*.gir

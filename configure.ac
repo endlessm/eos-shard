@@ -16,8 +16,8 @@ dnl You should have received a copy of the GNU Lesser General Public
 dnl License along with epak.  If not, see
 dnl <http://www.gnu.org/licenses/>.
 
-AC_INIT([eos-packfile], [0],
-    [], [eos-packfile], [http://endlessm.com])
+AC_INIT([epak], [0],
+    [], [epak], [http://endlessm.com])
 AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign 1.11 tar-ustar no-dist-gzip dist-xz subdir-objects])
 AM_SILENT_RULES([yes])
 

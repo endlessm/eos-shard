@@ -12,10 +12,27 @@ Standards-Version: 3.9.4
 Section: non-free/libs
 Homepage: http://www.endlessm.com
 
-Package: gir1.2-epak-1.0
-Section: non-free/libdevel
+Package: libepak-0-0
+Section: non-free/libs
 Architecture: any
 Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Description: epak C library
+
+Package: libepak-0-dev
+Section: non-free/libdevel
+Architecture: any
+Depends: libepak-0-0 (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Description: epak headers and development files
+
+Package: gir1.2-epak-0
+Section: non-free/introspection
+Architecture: any
+Depends: libepak-0-0 (= ${binary:Version}),
+         ${gir:Depends},
+         ${misc:Depends},
          ${shlibs:Depends}
 Description: GObject bindings for epak
  Epak is a library for generating and extracting epak archives.
