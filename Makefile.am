@@ -29,6 +29,7 @@ eos_shard_headers = \
 	src/eos-shard-blob.h \
 	src/eos-shard-blob-stream.h \
 	src/eos-shard-writer.h \
+	src/eos-shard-enums.h \
 	src/eos-shard-format.h \
 	src/eos-shard-types.h \
 	src/eos-shard-utils.h \
@@ -40,6 +41,7 @@ eos_shard_sources = \
 	src/eos-shard-blob.c \
 	src/eos-shard-blob-stream.c \
 	src/eos-shard-writer.c \
+	src/eos-shard-enums.c \
 	$(NULL)
 
 pkginclude_HEADERS = $(eos_shard_headers)
