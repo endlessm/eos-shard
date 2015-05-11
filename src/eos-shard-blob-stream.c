@@ -19,7 +19,11 @@
 
 #include "eos-shard-blob-stream.h"
 #include "eos-shard-blob.h"
+#include "eos-shard-enums.h"
 #include "eos-shard-shard-file.h"
+
+#include <string.h>
+#include <errno.h>
 
 struct _EosShardBlobStreamPrivate
 {
@@ -41,6 +45,7 @@ eos_shard_blob_stream_read (GInputStream  *stream,
   EosShardBlobStream *blob_stream;
   EosShardBlobStreamPrivate *priv;
   gsize actual_count, size_read;
+  int read_error;
   goffset blob_offset;
 
   blob_stream = EOS_SHARD_BLOB_STREAM (stream);
@@ -50,6 +55,13 @@ eos_shard_blob_stream_read (GInputStream  *stream,
   actual_count = MIN (count, _eos_shard_blob_get_packed_size (priv->blob) - priv->pos);
 
   size_read = _eos_shard_shard_file_read_data (priv->shard_file, buffer, actual_count, blob_offset + priv->pos);
+  read_error = errno;
+  if (size_read == -1) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_STREAM_READ,
+                 "Read failed: %s", strerror (read_error));
+    return -1;
+  }
+
   priv->pos += size_read;
   return size_read;
 }

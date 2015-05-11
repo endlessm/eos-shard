@@ -19,15 +19,16 @@
 
 #include "eos-shard-shard-file.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <zlib.h>
 
-#include "eos-shard-record.h"
-
+#include "eos-shard-enums.h"
 #include "eos-shard-format.h"
+#include "eos-shard-record.h"
 #include "eos-shard-utils.h"
 
 struct _EosShardShardFilePrivate
@@ -63,16 +64,28 @@ eos_shard_shard_file_init_internal (GInitable *initable,
   EosShardShardFile *shard_file = EOS_SHARD_SHARD_FILE (initable);
   EosShardShardFilePrivate *priv = eos_shard_shard_file_get_instance_private (shard_file);
 
-  if (!priv->path)
+  if (!priv->path) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_PATH_NOT_SET,
+                 "No path was given.");
     return FALSE;
+  }
 
   priv->fd = open (priv->path, O_RDONLY);
   if (priv->fd < 0) {
+    if (errno == ENOENT)
+      g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_NOT_FOUND,
+                   "No file was found at path %s", priv->path);
+    else
+      g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_COULD_NOT_OPEN,
+                   "Could not open file %s: %m", priv->path);
+
     return FALSE;
   }
 
   read (priv->fd, &priv->hdr, sizeof (priv->hdr));
   if (memcmp (priv->hdr.magic, EOS_SHARD_MAGIC, sizeof (priv->hdr.magic) != 0)) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
+                 "The shard file at %s is corrupt.", priv->path);
     close (priv->fd);
     return FALSE;
   }
