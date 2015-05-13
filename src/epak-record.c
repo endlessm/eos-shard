@@ -36,12 +36,9 @@ epak_record_new (void)
 static void
 epak_record_free (EpakRecord *record)
 {
-  if (record->pak != NULL)
-    g_object_unref (record->pak);
-  if (record->data != NULL)
-    epak_blob_unref (record->data);
-  if (record->metadata != NULL)
-    epak_blob_unref (record->metadata);
+  g_clear_object (&record->pak);
+  g_clear_pointer (&record->data, epak_blob_unref);
+  g_clear_pointer (&record->metadata, epak_blob_unref);
   g_free (record);
 }
 
