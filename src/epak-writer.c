@@ -57,6 +57,13 @@ epak_writer_finalize (GObject *object)
 }
 
 static void
+epak_writer_record_entry_clear (struct epak_writer_record_entry *entry)
+{
+  g_clear_object (&entry->metadata_file);
+  g_clear_object (&entry->data_file);
+}
+
+static void
 epak_writer_class_init (EpakWriterClass *klass)
 {
   GObjectClass *gobject_class;
@@ -71,6 +78,7 @@ epak_writer_init (EpakWriter *writer)
   EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
 
   priv->entries = g_array_new (FALSE, TRUE, sizeof (struct epak_writer_record_entry));
+  g_array_set_clear_func (priv->entries, (GDestroyNotify) epak_writer_record_entry_clear);
 }
 
 static void
@@ -118,10 +126,10 @@ epak_writer_add_record (EpakWriter *writer,
     g_assert (memcmp (record_entry.base.raw_name, e->base.raw_name, EPAK_RAW_NAME_SIZE) > 0);
   }
 
-  record_entry.metadata_file = metadata;
+  record_entry.metadata_file = g_object_ref (metadata);
   record_entry.base.metadata.flags = metadata_flags;
   fill_blob_entry_from_gfile (&record_entry.base.metadata, metadata);
-  record_entry.data_file = data;
+  record_entry.data_file = g_object_ref (data);
   record_entry.base.data.flags = data_flags;
   fill_blob_entry_from_gfile (&record_entry.base.data, data);
 
