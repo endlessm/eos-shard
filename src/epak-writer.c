@@ -51,10 +51,9 @@ epak_writer_finalize (GObject *object)
   writer = EPAK_WRITER (object);
   priv = epak_writer_get_instance_private (writer);
 
-  if (priv->entries != NULL)
-    g_array_unref (priv->entries);
+  g_array_unref (priv->entries);
 
-  G_OBJECT_CLASS (epak_writer_parent_class)->dispose (object);
+  G_OBJECT_CLASS (epak_writer_parent_class)->finalize (object);
 }
 
 static void

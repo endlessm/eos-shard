@@ -141,6 +141,7 @@ epak_pak_finalize (GObject *object)
   EpakPakPrivate *priv = epak_pak_get_instance_private (pak);
 
   close (priv->fd);
+  g_free (priv->entries);
   g_clear_pointer (&priv->path, g_free);
 
   G_OBJECT_CLASS (epak_pak_parent_class)->finalize (object);
