@@ -54,7 +54,7 @@ epak_writer_finalize (GObject *object)
   if (priv->entries != NULL)
     g_array_unref (priv->entries);
 
-  G_OBJECT_CLASS (epak_writer_parent_class)->dispose (object);
+  G_OBJECT_CLASS (epak_writer_parent_class)->finalize (object);
 }
 
 static void
