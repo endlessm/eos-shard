@@ -1,3 +1,9 @@
+eos-shard (1.1) unstable; urgency=low
+
+  * Rename to eos-shard
+
+ -- Jasper St. Pierre <jstpierre@mecheye.net>  Mon, 18 May 2015 16:19:23 -0700
+
 epak (1.0) unstable; urgency=medium
 
   * Initial release.

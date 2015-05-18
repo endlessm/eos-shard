@@ -1,88 +1,88 @@
 /* Copyright 2015 Endless Mobile, Inc. */
 
-/* This file is part of epak.
+/* This file is part of eos-shard.
  *
- * epak is free software: you can redistribute it and/or modify
+ * eos-shard is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
  * by the Free Software Foundation, either version 2.1 of the License, or
  * (at your option) any later version.
  *
- * epak is distributed in the hope that it will be useful,
+ * eos-shard is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with epak.  If not, see
+ * License along with eos-shard.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "epak-writer.h"
+#include "eos-shard-writer.h"
 
 #include <fcntl.h>
 #include <string.h>
 #include <zlib.h>
 
-#include "epak-pak.h"
-#include "epak-utils.h"
+#include "eos-shard-shard-file.h"
+#include "eos-shard-utils.h"
 
-struct epak_writer_record_entry
+struct eos_shard_writer_record_entry
 {
-  struct epak_record_entry base;
+  struct eos_shard_record_entry base;
 
   GFile *metadata_file;
   GFile *data_file;
 };
 
-struct _EpakWriterPrivate
+struct _EosShardWriterPrivate
 {
   GArray *entries;
 };
-typedef struct _EpakWriterPrivate EpakWriterPrivate;
+typedef struct _EosShardWriterPrivate EosShardWriterPrivate;
 
-G_DEFINE_TYPE_WITH_PRIVATE (EpakWriter, epak_writer, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (EosShardWriter, eos_shard_writer, G_TYPE_OBJECT);
 
 static void
-epak_writer_finalize (GObject *object)
+eos_shard_writer_finalize (GObject *object)
 {
-  EpakWriter *writer;
-  EpakWriterPrivate *priv;
+  EosShardWriter *writer;
+  EosShardWriterPrivate *priv;
 
-  writer = EPAK_WRITER (object);
-  priv = epak_writer_get_instance_private (writer);
+  writer = EOS_SHARD_WRITER (object);
+  priv = eos_shard_writer_get_instance_private (writer);
 
   g_array_unref (priv->entries);
 
-  G_OBJECT_CLASS (epak_writer_parent_class)->finalize (object);
+  G_OBJECT_CLASS (eos_shard_writer_parent_class)->finalize (object);
 }
 
 static void
-epak_writer_record_entry_clear (struct epak_writer_record_entry *entry)
+eos_shard_writer_record_entry_clear (struct eos_shard_writer_record_entry *entry)
 {
   g_clear_object (&entry->metadata_file);
   g_clear_object (&entry->data_file);
 }
 
 static void
-epak_writer_class_init (EpakWriterClass *klass)
+eos_shard_writer_class_init (EosShardWriterClass *klass)
 {
   GObjectClass *gobject_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
-  gobject_class->finalize = epak_writer_finalize;
+  gobject_class->finalize = eos_shard_writer_finalize;
 }
 
 static void
-epak_writer_init (EpakWriter *writer)
+eos_shard_writer_init (EosShardWriter *writer)
 {
-  EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
+  EosShardWriterPrivate *priv = eos_shard_writer_get_instance_private (writer);
 
-  priv->entries = g_array_new (FALSE, TRUE, sizeof (struct epak_writer_record_entry));
-  g_array_set_clear_func (priv->entries, (GDestroyNotify) epak_writer_record_entry_clear);
+  priv->entries = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_record_entry));
+  g_array_set_clear_func (priv->entries, (GDestroyNotify) eos_shard_writer_record_entry_clear);
 }
 
 static void
-fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
+fill_blob_entry_from_gfile (struct eos_shard_blob_entry *blob, GFile *file)
 {
   GFileInfo *info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
   const char *ct = g_file_info_get_content_type (info);
@@ -96,34 +96,34 @@ fill_blob_entry_from_gfile (struct epak_blob_entry *blob, GFile *file)
 }
 
 /**
- * epak_writer_add_record:
- * @writer: a EpakWriter
+ * eos_shard_writer_add_record:
+ * @writer: a EosShardWriter
  * @hex_name: the hexadecimal string which will act as this entry's ID
  * @metadata: a #GFile pointing to the entry's metadata on disk
- * @metadata_flags: an #EpakBlobFlags to be applied to the metadata
+ * @metadata_flags: an #EosShardBlobFlags to be applied to the metadata
  * @data: a #GFile pointing to the entry's data on disk
- * @data_flags: an #EpakBlobFlags to be applied to the data
+ * @data_flags: an #EosShardBlobFlags to be applied to the data
  *
- * Adds a data/metadata file pair to the epak. These pairs must be added in
+ * Adds a data/metadata file pair to the shard file. These pairs must be added in
  * increasing hex_name order. Once all pairs have been added, call
- * epak_writer_write to save the epak to disk.
+ * eos_shard_writer_write() to save the shard file to disk.
  */
 void
-epak_writer_add_record (EpakWriter *writer,
-                       char *hex_name,
-                       GFile *metadata,
-                       EpakBlobFlags metadata_flags,
-                       GFile *data,
-                       EpakBlobFlags data_flags)
+eos_shard_writer_add_record (EosShardWriter *writer,
+                             char *hex_name,
+                             GFile *metadata,
+                             EosShardBlobFlags metadata_flags,
+                             GFile *data,
+                             EosShardBlobFlags data_flags)
 {
-  EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
-  struct epak_writer_record_entry record_entry = {};
+  EosShardWriterPrivate *priv = eos_shard_writer_get_instance_private (writer);
+  struct eos_shard_writer_record_entry record_entry = {};
 
-  epak_util_hex_name_to_raw_name (record_entry.base.raw_name, hex_name);
+  eos_shard_util_hex_name_to_raw_name (record_entry.base.raw_name, hex_name);
 
   if (priv->entries->len > 0) {
-    struct epak_writer_record_entry *e = &g_array_index (priv->entries, struct epak_writer_record_entry, priv->entries->len - 1);
-    g_assert (memcmp (record_entry.base.raw_name, e->base.raw_name, EPAK_RAW_NAME_SIZE) > 0);
+    struct eos_shard_writer_record_entry *e = &g_array_index (priv->entries, struct eos_shard_writer_record_entry, priv->entries->len - 1);
+    g_assert (memcmp (record_entry.base.raw_name, e->base.raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
   }
 
   record_entry.metadata_file = g_object_ref (metadata);
@@ -139,13 +139,13 @@ epak_writer_add_record (EpakWriter *writer,
 static void
 write_blob (int fd,
             int data_offs,
-            struct epak_blob_entry *blob,
+            struct eos_shard_blob_entry *blob,
             GFile *file)
 {
   GFileInputStream *file_stream = g_file_read (file, NULL, NULL);
   GInputStream *stream;
 
-  if (blob->flags & EPAK_BLOB_FLAG_COMPRESSED_ZLIB) {
+  if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     GZlibCompressor *compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
     stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
     g_object_unref (file_stream);
@@ -171,17 +171,17 @@ write_blob (int fd,
 }
 
 void
-epak_writer_write (EpakWriter *writer,
-                   char *path)
+eos_shard_writer_write (EosShardWriter *writer,
+                        char *path)
 {
-  EpakWriterPrivate *priv = epak_writer_get_instance_private (writer);
+  EosShardWriterPrivate *priv = eos_shard_writer_get_instance_private (writer);
   int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  struct epak_hdr hdr;
+  struct eos_shard_hdr hdr;
   int entry_offs;
 
-  memcpy (hdr.magic, EPAK_MAGIC, sizeof (hdr.magic));
+  memcpy (hdr.magic, EOS_SHARD_MAGIC, sizeof (hdr.magic));
   hdr.n_records = priv->entries->len;
-  hdr.data_offs = ALIGN (ALIGN (sizeof (hdr)) + sizeof (struct epak_record_entry) * hdr.n_records);
+  hdr.data_offs = ALIGN (ALIGN (sizeof (hdr)) + sizeof (struct eos_shard_record_entry) * hdr.n_records);
   write (fd, &hdr, sizeof (hdr));
 
   entry_offs = lalign (fd);
@@ -189,7 +189,7 @@ epak_writer_write (EpakWriter *writer,
 
   int i;
   for (i = 0; i < priv->entries->len; i++) {
-    struct epak_writer_record_entry *e = &g_array_index (priv->entries, struct epak_writer_record_entry, i);
+    struct eos_shard_writer_record_entry *e = &g_array_index (priv->entries, struct eos_shard_writer_record_entry, i);
 
     write_blob (fd, hdr.data_offs, &e->base.metadata, e->metadata_file);
     write_blob (fd, hdr.data_offs, &e->base.data, e->data_file);
@@ -198,8 +198,8 @@ epak_writer_write (EpakWriter *writer,
   lseek (fd, entry_offs, SEEK_SET);
 
   for (i = 0; i < priv->entries->len; i++) {
-    struct epak_writer_record_entry *e = &g_array_index (priv->entries, struct epak_writer_record_entry, i);
-    struct epak_record_entry *record_entry = &e->base;
+    struct eos_shard_writer_record_entry *e = &g_array_index (priv->entries, struct eos_shard_writer_record_entry, i);
+    struct eos_shard_record_entry *record_entry = &e->base;
     write (fd, record_entry, sizeof (*record_entry));
   }
 

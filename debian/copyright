@@ -1,5 +1,5 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: epak
+Upstream-Name: eos-packfile
 Upstream-Contact: Jasper St. Pierre <jasper@endlessm.com>
 Copyright: Copyright 2014 Endless Mobile, Inc.
 License: LGPL-2.1+

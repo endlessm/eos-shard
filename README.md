@@ -1,5 +1,5 @@
-epak
-====
+eos-shard
+=========
 
 A simple archive format for storing data/metadata pairs.
 
@@ -10,4 +10,4 @@ This format was created to satisfy the following requirements:
 * Provides optional zlib (de)compression for individual files
 * Convenient storage/access of both data and metadata
 * Provides interface for inferring file content-type
-* Provides GObject introspectable library for reading/writing epaks
+* Provides GObject introspectable library for reading/writing shards

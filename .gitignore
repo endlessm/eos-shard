@@ -1,9 +1,6 @@
 *~
 \#*\#
-mkepak
-rdepak
-test.epak
-test/
+test.shard
 .libs
 .deps
 .dirstamp
