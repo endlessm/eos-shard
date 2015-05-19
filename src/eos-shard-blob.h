@@ -54,7 +54,8 @@ struct _EosShardBlob {
 };
 
 const char * eos_shard_blob_get_content_type (EosShardBlob *blob);
-GBytes * eos_shard_blob_load_contents (EosShardBlob *blob);
+GBytes * eos_shard_blob_load_contents (EosShardBlob  *blob,
+                                       GError       **error);
 GInputStream * eos_shard_blob_get_stream (EosShardBlob *blob);
 EosShardBlobFlags eos_shard_blob_get_flags (EosShardBlob *blob);
 gsize eos_shard_blob_get_content_size (EosShardBlob *blob);

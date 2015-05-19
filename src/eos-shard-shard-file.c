@@ -324,7 +324,8 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   csum = adler32 (csum, buf, blob->size);
   if (csum != blob->adler32) {
     g_clear_pointer (&bytes, g_bytes_unref);
-    g_warning ("Could not load blob: checksum did not match");
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_CHECKSUM_MISMATCH,
+                 "Could not load blob: checksum did not match");
     return NULL;
   }
 

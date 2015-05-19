@@ -134,9 +134,10 @@ eos_shard_blob_get_content_size (EosShardBlob *blob)
  * Returns: (transfer full): the blob's data
  */
 GBytes *
-eos_shard_blob_load_contents (EosShardBlob *blob)
+eos_shard_blob_load_contents (EosShardBlob  *blob,
+                              GError       **error)
 {
-  return _eos_shard_shard_file_load_blob (blob->shard_file, blob, NULL);
+  return _eos_shard_shard_file_load_blob (blob->shard_file, blob, error);
 }
 
 EosShardBlob *
