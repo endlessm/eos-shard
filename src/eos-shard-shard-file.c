@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <zlib.h>
 
 #include "eos-shard-enums.h"
 #include "eos-shard-format.h"
@@ -320,9 +319,13 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   _eos_shard_shard_file_read_data (self, buf, blob->size, blob->offs);
   GBytes *bytes = g_bytes_new_take (buf, blob->size);
 
-  uint32_t csum = adler32 (0L, NULL, 0);
-  csum = adler32 (csum, buf, blob->size);
-  if (csum != blob->adler32) {
+  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
+  uint8_t checksum_buf[64];
+  g_checksum_update (checksum, buf, blob->size);
+  size_t checksum_buf_len = sizeof (checksum_buf);
+  g_checksum_get_digest (checksum, checksum_buf, &checksum_buf_len);
+
+  if (memcmp (checksum_buf, blob->checksum, sizeof (checksum_buf) != 0)) {
     g_clear_pointer (&bytes, g_bytes_unref);
     g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_CHECKSUM_MISMATCH,
                  "Could not load blob: checksum did not match");

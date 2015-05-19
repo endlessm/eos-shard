@@ -22,7 +22,6 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <string.h>
-#include <zlib.h>
 
 #include "eos-shard-shard-file.h"
 
@@ -41,7 +40,7 @@ struct eos_shard_writer_blob_entry
   GFile *file;
   char *content_type;
   uint16_t flags;
-  uint32_t adler32;
+  uint8_t checksum[64];
   uint64_t offs;
   uint64_t size;
   uint64_t uncompressed_size;
@@ -167,16 +166,18 @@ write_blob (int fd,
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  blob->adler32 = adler32 (0L, NULL, 0);
   blob->offs = lalign (fd) - data_offs;
 
-  char buf[4096];
+  uint8_t buf[4096];
   int size, total_size = 0;
+  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
   while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
     write (fd, buf, size);
-    blob->adler32 = adler32 (blob->adler32, (const Bytef *) buf, size);
+    g_checksum_update (checksum, buf, size);
     total_size += size;
   }
+  size_t checksum_buf_len = sizeof (blob->checksum);
+  g_checksum_get_digest (checksum, blob->checksum, &checksum_buf_len);
 
   blob->size = total_size;
 }
@@ -184,10 +185,11 @@ write_blob (int fd,
 static GVariant *
 blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 {
-  return g_variant_new (EOS_SHARD_BLOB_ENTRY,
+  return g_variant_new ("(s@ayuttt)",
                         blob->content_type,
+                        g_variant_new_from_data (G_VARIANT_TYPE ("ay"), blob->checksum,
+                                                 sizeof (blob->checksum), FALSE, NULL, NULL),
                         blob->flags,
-                        blob->adler32,
                         blob->offs,
                         blob->size,
                         blob->uncompressed_size);

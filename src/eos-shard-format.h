@@ -33,8 +33,8 @@ typedef enum eos_shard_blob_flags
 
 #define EOS_SHARD_MAGIC ("ShardV1")
 
-/* content-type, flags, adler32, offset, size, uncompressed-size */
-#define EOS_SHARD_BLOB_ENTRY "(suuttt)"
+/* content-type, sha256 checksum, flags, offset, size, uncompressed-size */
+#define EOS_SHARD_BLOB_ENTRY "(sayuttt)"
 
 /* raw name, metadata blob, data blob */
 #define EOS_SHARD_RECORD_ENTRY "(ay" EOS_SHARD_BLOB_ENTRY EOS_SHARD_BLOB_ENTRY ")"
