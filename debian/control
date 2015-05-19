@@ -1,4 +1,4 @@
-Source: epak
+Source: eos-shard
 Priority: standard
 Maintainer: Jasper St. Pierre <jasper@endlessm.com>
 Build-Depends: autotools-dev,
@@ -12,27 +12,27 @@ Standards-Version: 3.9.4
 Section: non-free/libs
 Homepage: http://www.endlessm.com
 
-Package: libepak-0-0
+Package: libeos-shard-0-0
 Section: non-free/libs
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends}
-Description: epak C library
+Description: eos-shard C library
 
-Package: libepak-0-dev
+Package: libeos-shard-0-dev
 Section: non-free/libdevel
 Architecture: any
-Depends: libepak-0-0 (= ${binary:Version}),
+Depends: libeos-shard-0-0 (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
-Description: epak headers and development files
+Description: eos-shard headers and development files
 
-Package: gir1.2-epak-0
+Package: gir1.2-eos-shard-0
 Section: non-free/introspection
 Architecture: any
-Depends: libepak-0-0 (= ${binary:Version}),
+Depends: libeos-shard-0-0 (= ${binary:Version}),
          ${gir:Depends},
          ${misc:Depends},
          ${shlibs:Depends}
-Description: GObject bindings for epak
- Epak is a library for generating and extracting epak archives.
+Description: GObject bindings for eos-shard
+ Eos-Shard is a library for generating and extracting eos-shard archives.
