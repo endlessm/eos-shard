@@ -26,6 +26,7 @@ INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 epak_headers = \
 	src/epak-pak.h \
 	src/epak-record.h \
+	src/epak-enums.h \
 	src/epak-blob.h \
 	src/epak-blob-stream.h \
 	src/epak-writer.h \
@@ -37,6 +38,7 @@ epak_headers = \
 epak_sources = \
 	src/epak-pak.c \
 	src/epak-record.c \
+	src/epak-enums.c \
 	src/epak-blob.c \
 	src/epak-blob-stream.c \
 	src/epak-writer.c \
