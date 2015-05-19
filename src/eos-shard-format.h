@@ -22,21 +22,10 @@
 
 #include <stdint.h>
 
-/* ESD1 file format */
-
 #pragma pack(push,1)
 
-/* "ESD" stands for "EOS SharD". If you have a better acronym,
- * please let me know. This is the best I could come up with for
- * three letters... */
-#define EOS_SHARD_MAGIC ("ESD1")
-
-struct eos_shard_hdr
-{
-  char magic[4];
-  uint32_t n_records;
-  uint64_t data_offs;
-};
+/* The base file format consists of a uint64_t, which defines
+ * the header's length. After that comes an EOS_SHARD_HEADER_ENTRY. */
 
 typedef enum eos_shard_blob_flags
 {
@@ -44,25 +33,19 @@ typedef enum eos_shard_blob_flags
   EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB,
 } EosShardBlobFlags;
 
-struct eos_shard_blob_entry
-{
-  char content_type[64];
-  uint16_t flags;
-  uint32_t adler32;
-  uint64_t offs;
-  uint64_t size;
-  uint64_t uncompressed_size;
-};
+#define EOS_SHARD_MAGIC ("ShardV1")
+
+/* content-type, flags, adler32, offset, size, uncompressed-size */
+#define EOS_SHARD_BLOB_ENTRY "(suuttt)"
+
+/* raw name, metadata blob, data blob */
+#define EOS_SHARD_RECORD_ENTRY "(ay" EOS_SHARD_BLOB_ENTRY EOS_SHARD_BLOB_ENTRY ")"
+
+/* magic, doc offset, array of records */
+#define EOS_SHARD_HEADER_ENTRY "(sta" EOS_SHARD_RECORD_ENTRY ")"
 
 #define EOS_SHARD_RAW_NAME_SIZE 20
 #define EOS_SHARD_HEX_NAME_SIZE (EOS_SHARD_RAW_NAME_SIZE*2)
-
-struct eos_shard_record_entry
-{
-  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
-  struct eos_shard_blob_entry metadata;
-  struct eos_shard_blob_entry data;
-};
 
 #pragma pack(pop)
 

@@ -32,6 +32,7 @@ static void
 eos_shard_blob_free (EosShardBlob *blob)
 {
   g_clear_object (&blob->shard_file);
+  g_free (blob->content_type);
   g_free (blob);
 }
 
@@ -59,7 +60,7 @@ eos_shard_blob_unref (EosShardBlob *blob)
 const char *
 eos_shard_blob_get_content_type (EosShardBlob *blob)
 {
-  return (const char *) blob->blob->content_type;
+  return (const char *) blob->content_type;
 }
 
 /**
@@ -78,7 +79,7 @@ eos_shard_blob_get_stream (EosShardBlob *blob)
   GZlibDecompressor *decompressor;
 
   blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
-  if (blob->blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
+  if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
     converter_stream = g_converter_input_stream_new (blob_stream, G_CONVERTER (decompressor));
     g_object_unref (blob_stream);
@@ -101,19 +102,19 @@ eos_shard_blob_get_stream (EosShardBlob *blob)
 EosShardBlobFlags
 eos_shard_blob_get_flags (EosShardBlob *blob)
 {
-  return (EosShardBlobFlags) blob->blob->flags;
+  return (EosShardBlobFlags) blob->flags;
 }
 
 gsize
 _eos_shard_blob_get_packed_size (EosShardBlob *blob)
 {
-  return blob->blob->size;
+  return blob->size;
 }
 
 goffset
 _eos_shard_blob_get_offset (EosShardBlob *blob)
 {
-  return blob->blob->offs;
+  return blob->offs;
 }
 
 /**
@@ -126,7 +127,7 @@ _eos_shard_blob_get_offset (EosShardBlob *blob)
 gsize
 eos_shard_blob_get_content_size (EosShardBlob *blob)
 {
-  return blob->blob->uncompressed_size;
+  return blob->uncompressed_size;
 }
 
 /**
@@ -140,16 +141,22 @@ eos_shard_blob_get_content_size (EosShardBlob *blob)
 GBytes *
 eos_shard_blob_load_contents (EosShardBlob *blob)
 {
-  return _eos_shard_shard_file_load_blob (blob->shard_file, blob->blob, NULL);
+  return _eos_shard_shard_file_load_blob (blob->shard_file, blob, NULL);
 }
 
 EosShardBlob *
-_eos_shard_blob_new_for_blob (EosShardShardFile           *shard_file,
-                              struct eos_shard_blob_entry *blob_)
+_eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
+                                 GVariant                    *blob_variant)
 {
   EosShardBlob *blob = eos_shard_blob_new ();
   blob->shard_file = g_object_ref (shard_file);
-  blob->blob = blob_;
+  g_variant_get (blob_variant, EOS_SHARD_BLOB_ENTRY,
+                 &blob->content_type,
+                 &blob->flags,
+                 &blob->adler32,
+                 &blob->offs,
+                 &blob->size,
+                 &blob->uncompressed_size);
   return blob;
 }
 

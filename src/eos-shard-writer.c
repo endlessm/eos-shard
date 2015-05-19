@@ -19,19 +19,39 @@
 
 #include "eos-shard-writer.h"
 
+#include <endian.h>
 #include <fcntl.h>
 #include <string.h>
 #include <zlib.h>
 
 #include "eos-shard-shard-file.h"
-#include "eos-shard-utils.h"
+
+#define ALIGN(n) (((n) + 0x3f) & ~0x3f)
+
+static off_t lalign(int fd)
+{
+  off_t off = lseek (fd, 0, SEEK_CUR);
+  off = ALIGN (off);
+  lseek (fd, off, SEEK_SET);
+  return off;
+}
+
+struct eos_shard_writer_blob_entry
+{
+  GFile *file;
+  char *content_type;
+  uint16_t flags;
+  uint32_t adler32;
+  uint64_t offs;
+  uint64_t size;
+  uint64_t uncompressed_size;
+};
 
 struct eos_shard_writer_record_entry
 {
-  struct eos_shard_record_entry base;
-
-  GFile *metadata_file;
-  GFile *data_file;
+  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
+  struct eos_shard_writer_blob_entry metadata;
+  struct eos_shard_writer_blob_entry data;
 };
 
 struct _EosShardWriterPrivate
@@ -57,10 +77,17 @@ eos_shard_writer_finalize (GObject *object)
 }
 
 static void
+eos_shard_writer_blob_entry_clear (struct eos_shard_writer_blob_entry *blob)
+{
+  g_clear_object (&blob->file);
+  g_free (blob->content_type);
+}
+
+static void
 eos_shard_writer_record_entry_clear (struct eos_shard_writer_record_entry *entry)
 {
-  g_clear_object (&entry->metadata_file);
-  g_clear_object (&entry->data_file);
+  eos_shard_writer_blob_entry_clear (&entry->metadata);
+  eos_shard_writer_blob_entry_clear (&entry->data);
 }
 
 static void
@@ -82,14 +109,13 @@ eos_shard_writer_init (EosShardWriter *writer)
 }
 
 static void
-fill_blob_entry_from_gfile (struct eos_shard_blob_entry *blob, GFile *file)
+fill_blob_entry_from_gfile (struct eos_shard_writer_blob_entry *blob, GFile *file)
 {
   GFileInfo *info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
   const char *ct = g_file_info_get_content_type (info);
 
-  g_assert (strlen (ct) < sizeof (blob->content_type));
-  strcpy (blob->content_type, ct);
-
+  blob->file = g_object_ref (file);
+  blob->content_type = g_strdup (ct);
   blob->uncompressed_size = g_file_info_get_size (info);
 
   g_object_unref (info);
@@ -119,19 +145,18 @@ eos_shard_writer_add_record (EosShardWriter *writer,
   EosShardWriterPrivate *priv = eos_shard_writer_get_instance_private (writer);
   struct eos_shard_writer_record_entry record_entry = {};
 
-  eos_shard_util_hex_name_to_raw_name (record_entry.base.raw_name, hex_name);
+  eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
 
   if (priv->entries->len > 0) {
     struct eos_shard_writer_record_entry *e = &g_array_index (priv->entries, struct eos_shard_writer_record_entry, priv->entries->len - 1);
-    g_assert (memcmp (record_entry.base.raw_name, e->base.raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
+    g_assert (memcmp (record_entry.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
   }
 
-  record_entry.metadata_file = g_object_ref (metadata);
-  record_entry.base.metadata.flags = metadata_flags;
-  fill_blob_entry_from_gfile (&record_entry.base.metadata, metadata);
-  record_entry.data_file = g_object_ref (data);
-  record_entry.base.data.flags = data_flags;
-  fill_blob_entry_from_gfile (&record_entry.base.data, data);
+  fill_blob_entry_from_gfile (&record_entry.metadata, metadata);
+  record_entry.metadata.flags = metadata_flags;
+
+  fill_blob_entry_from_gfile (&record_entry.data, data);
+  record_entry.data.flags = data_flags;
 
   g_array_append_val (priv->entries, record_entry);
 }
@@ -139,10 +164,9 @@ eos_shard_writer_add_record (EosShardWriter *writer,
 static void
 write_blob (int fd,
             int data_offs,
-            struct eos_shard_blob_entry *blob,
-            GFile *file)
+            struct eos_shard_writer_blob_entry *blob)
 {
-  GFileInputStream *file_stream = g_file_read (file, NULL, NULL);
+  GFileInputStream *file_stream = g_file_read (blob->file, NULL, NULL);
   GInputStream *stream;
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
@@ -170,38 +194,83 @@ write_blob (int fd,
   g_object_unref (stream);
 }
 
+static GVariant *
+blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
+{
+  return g_variant_new (EOS_SHARD_BLOB_ENTRY,
+                        blob->content_type,
+                        blob->flags,
+                        blob->adler32,
+                        blob->offs,
+                        blob->size,
+                        blob->uncompressed_size);
+}
+
+static GVariant *
+record_entry_variant (struct eos_shard_writer_record_entry *entry)
+{
+  return g_variant_new ("(^ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                        entry->raw_name,
+                        blob_entry_variant (&entry->metadata),
+                        blob_entry_variant (&entry->data));
+}
+
+static GVariant *
+header_entry_variant (uint64_t data_offs, GArray *entries)
+{
+  GVariantBuilder builder;
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a" EOS_SHARD_RECORD_ENTRY));
+
+  int i;
+  for (i = 0; i < entries->len; i++) {
+    struct eos_shard_writer_record_entry *e = &g_array_index (entries, struct eos_shard_writer_record_entry, i);
+    g_variant_builder_add (&builder, "@" EOS_SHARD_RECORD_ENTRY, record_entry_variant (e));
+  }
+
+  return g_variant_new (EOS_SHARD_HEADER_ENTRY,
+                        EOS_SHARD_MAGIC,
+                        data_offs,
+                        &builder);
+}
+
+static int
+write_variant (int fd, GVariant *variant)
+{
+  return write (fd,
+                g_variant_get_data (variant),
+                g_variant_get_size (variant));
+}
+
 void
 eos_shard_writer_write (EosShardWriter *writer,
                         char *path)
 {
   EosShardWriterPrivate *priv = eos_shard_writer_get_instance_private (writer);
   int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  struct eos_shard_hdr hdr;
-  int entry_offs;
+  GVariant *variant;
 
-  memcpy (hdr.magic, EOS_SHARD_MAGIC, sizeof (hdr.magic));
-  hdr.n_records = priv->entries->len;
-  hdr.data_offs = ALIGN (ALIGN (sizeof (hdr)) + sizeof (struct eos_shard_record_entry) * hdr.n_records);
-  write (fd, &hdr, sizeof (hdr));
+  variant = header_entry_variant (0, priv->entries);
+  uint64_t header_size = g_variant_get_size (variant);
+  header_size = htole64 (header_size);
+  g_variant_unref (variant);
 
-  entry_offs = lalign (fd);
-  lseek (fd, hdr.data_offs, SEEK_SET);
+  uint64_t data_offs = ALIGN (4 + header_size);
+  lseek (fd, data_offs, SEEK_SET);
 
   int i;
   for (i = 0; i < priv->entries->len; i++) {
     struct eos_shard_writer_record_entry *e = &g_array_index (priv->entries, struct eos_shard_writer_record_entry, i);
 
-    write_blob (fd, hdr.data_offs, &e->base.metadata, e->metadata_file);
-    write_blob (fd, hdr.data_offs, &e->base.data, e->data_file);
+    write_blob (fd, data_offs, &e->metadata);
+    write_blob (fd, data_offs, &e->data);
   }
 
-  lseek (fd, entry_offs, SEEK_SET);
-
-  for (i = 0; i < priv->entries->len; i++) {
-    struct eos_shard_writer_record_entry *e = &g_array_index (priv->entries, struct eos_shard_writer_record_entry, i);
-    struct eos_shard_record_entry *record_entry = &e->base;
-    write (fd, record_entry, sizeof (*record_entry));
-  }
+  lseek (fd, 0, SEEK_SET);
+  write (fd, &header_size, sizeof (header_size));
+  variant = header_entry_variant (data_offs, priv->entries);
+  write_variant (fd, variant);
+  g_variant_unref (variant);
 
   close (fd);
 }

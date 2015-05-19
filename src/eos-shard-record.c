@@ -39,17 +39,18 @@ eos_shard_record_free (EosShardRecord *record)
   g_clear_object (&record->shard_file);
   g_clear_pointer (&record->data, eos_shard_blob_unref);
   g_clear_pointer (&record->metadata, eos_shard_blob_unref);
+  g_free (record->raw_name);
   g_free (record);
 }
 
-static EosShardRecord *
+EosShardRecord *
 eos_shard_record_ref (EosShardRecord *record)
 {
   record->ref_count++;
   return record;
 }
 
-static void
+void
 eos_shard_record_unref (EosShardRecord *record)
 {
   if (--record->ref_count == 0)
@@ -67,7 +68,7 @@ eos_shard_record_unref (EosShardRecord *record)
 uint8_t *
 eos_shard_record_get_raw_name (EosShardRecord *record)
 {
-  return (uint8_t *) record->record_entry->raw_name;
+  return (uint8_t *) record->raw_name;
 }
 
 /**
@@ -82,19 +83,25 @@ char *
 eos_shard_record_get_hex_name (EosShardRecord *record)
 {
   char *hex_name = g_malloc (41);
-  eos_shard_util_raw_name_to_hex_name (hex_name, record->record_entry->raw_name);
+  eos_shard_util_raw_name_to_hex_name (hex_name, record->raw_name);
   hex_name[EOS_SHARD_HEX_NAME_SIZE] = '\0';
   return hex_name;
 }
 
 EosShardRecord *
-_eos_shard_record_new_for_record_entry (EosShardShardFile *shard_file, struct eos_shard_record_entry *record_entry)
+_eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
 {
   EosShardRecord *record = eos_shard_record_new ();
+  GVariant *metadata_variant, *data_variant;
   record->shard_file = g_object_ref (shard_file);
-  record->record_entry = record_entry;
-  record->metadata = _eos_shard_blob_new_for_blob (shard_file, &record_entry->metadata);
-  record->data = _eos_shard_blob_new_for_blob (shard_file, &record_entry->data);
+  g_variant_get (record_variant, "(^ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                 &record->raw_name,
+                 &metadata_variant,
+                 &data_variant);
+  record->metadata = _eos_shard_blob_new_for_variant (shard_file, metadata_variant);
+  record->data = _eos_shard_blob_new_for_variant (shard_file, data_variant);
+  g_variant_unref (metadata_variant);
+  g_variant_unref (data_variant);
   return record;
 }
 

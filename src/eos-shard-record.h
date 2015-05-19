@@ -38,16 +38,19 @@ struct _EosShardRecord {
   /*< private >*/
   int ref_count;
   EosShardShardFile *shard_file;
-  struct eos_shard_record_entry *record_entry;
+  uint8_t *raw_name;
 
   /*< public >*/
   EosShardBlob *data;
   EosShardBlob *metadata;
 };
 
-EosShardRecord * _eos_shard_record_new_for_record_entry (EosShardShardFile *shard_file, struct eos_shard_record_entry *record_entry);
+EosShardRecord * _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant);
 
 uint8_t * eos_shard_record_get_raw_name (EosShardRecord *record);
 char * eos_shard_record_get_hex_name (EosShardRecord *record);
+
+EosShardRecord * eos_shard_record_ref (EosShardRecord *record);
+void eos_shard_record_unref (EosShardRecord *record);
 
 #endif /* EOS_SHARD_RECORD_H */

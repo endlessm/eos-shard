@@ -20,6 +20,7 @@
 #include "eos-shard-shard-file.h"
 
 #include <errno.h>
+#include <endian.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,15 +29,16 @@
 
 #include "eos-shard-enums.h"
 #include "eos-shard-format.h"
+#include "eos-shard-blob.h"
 #include "eos-shard-record.h"
-#include "eos-shard-utils.h"
 
 struct _EosShardShardFilePrivate
 {
-  int fd;
-  struct eos_shard_hdr hdr;
-  struct eos_shard_record_entry *entries;
   char *path;
+  int fd;
+  uint64_t data_offs;
+  size_t n_records;
+  EosShardRecord **records;
 };
 
 typedef struct _EosShardShardFilePrivate EosShardShardFilePrivate;
@@ -82,23 +84,39 @@ eos_shard_shard_file_init_internal (GInitable *initable,
     return FALSE;
   }
 
-  read (priv->fd, &priv->hdr, sizeof (priv->hdr));
-  if (memcmp (priv->hdr.magic, EOS_SHARD_MAGIC, sizeof (priv->hdr.magic) != 0)) {
+  uint64_t header_size;
+  read (priv->fd, &header_size, sizeof (header_size));
+  header_size = le64toh (header_size);
+
+  uint8_t *header_data = g_malloc (header_size);
+  read (priv->fd, header_data, header_size);
+
+  g_autoptr(GBytes) bytes = g_bytes_new_take (header_data, header_size);
+  g_autoptr(GVariant) header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_HEADER_ENTRY), bytes, FALSE);
+  g_autoptr(GVariantIter) records_iter;
+
+  const char *magic;
+  g_variant_get (header_variant, "(&sta" EOS_SHARD_RECORD_ENTRY ")",
+                 &magic,
+                 &priv->data_offs,
+                 &records_iter);
+
+  if (strcmp (magic, EOS_SHARD_MAGIC) != 0) {
     g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
                  "The shard file at %s is corrupt.", priv->path);
     close (priv->fd);
     return FALSE;
   }
 
-  priv->entries = g_new (struct eos_shard_record_entry, priv->hdr.n_records);
+  priv->n_records = g_variant_iter_n_children (records_iter);
+  priv->records = g_new (EosShardRecord *, priv->n_records);
 
-  lalign (priv->fd);
-
-  int i;
-  for (i = 0; i < priv->hdr.n_records; i++)
-    read (priv->fd, &priv->entries[i], sizeof (struct eos_shard_record_entry));
-
-  lalign (priv->fd);
+  GVariant *child;
+  int i = 0;
+  while ((child = g_variant_iter_next_value (records_iter))) {
+    priv->records[i++] = _eos_shard_record_new_for_variant (shard_file, child);
+    g_variant_unref (child);
+  }
 
   return TRUE;
 }
@@ -154,7 +172,10 @@ eos_shard_shard_file_finalize (GObject *object)
   EosShardShardFilePrivate *priv = eos_shard_shard_file_get_instance_private (shard_file);
 
   close (priv->fd);
-  g_free (priv->entries);
+  int i;
+  for (i = 0; i < priv->n_records; i++)
+    eos_shard_record_unref (priv->records[i]);
+  g_free (priv->records);
   g_clear_pointer (&priv->path, g_free);
 
   G_OBJECT_CLASS (eos_shard_shard_file_parent_class)->finalize (object);
@@ -235,8 +256,8 @@ eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
 static int
 eos_shard_record_entry_cmp (const void *a_, const void *b_)
 {
-  const struct eos_shard_record_entry *a = a_;
-  const struct eos_shard_record_entry *b = b_;
+  const EosShardRecord *a = * (const EosShardRecord **) a_;
+  const EosShardRecord *b = * (const EosShardRecord **) b_;
   return memcmp (a->raw_name, b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
@@ -250,17 +271,15 @@ eos_shard_record_entry_cmp (const void *a_, const void *b_)
 EosShardRecord *
 eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *raw_name)
 {
-  struct eos_shard_record_entry key = { };
-  memcpy (key.raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE);
-
   EosShardShardFilePrivate *priv = eos_shard_shard_file_get_instance_private (self);
 
-  struct eos_shard_record_entry *entry;
-  entry = bsearch (&key,
-                   priv->entries, priv->hdr.n_records,
-                   sizeof (struct eos_shard_record_entry),
-                   eos_shard_record_entry_cmp);
-  return _eos_shard_record_new_for_record_entry (self, entry);
+  EosShardRecord key = { .raw_name = raw_name };
+  EosShardRecord *keyp = &key;
+
+  return bsearch (&keyp,
+                  priv->records, priv->n_records,
+                  sizeof (EosShardRecord *),
+                  eos_shard_record_entry_cmp);
 }
 
 /**
@@ -295,23 +314,19 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
   GSList *l = NULL;
   int i;
 
-  for (i = priv->hdr.n_records - 1; i >= 0; i--) {
-    struct eos_shard_record_entry *entry = &priv->entries[i];
-    l = g_slist_prepend (l, _eos_shard_record_new_for_record_entry (self, entry));
-  }
+  for (i = priv->n_records - 1; i >= 0; i--)
+    l = g_slist_prepend (l, eos_shard_record_ref (priv->records[i]));
 
   return l;
 }
 
 GBytes *
-_eos_shard_shard_file_load_blob (EosShardShardFile *self, struct eos_shard_blob_entry *blob, GError **error)
+_eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
 {
-  GBytes *bytes;
-
   uint8_t *buf = g_malloc (blob->size);
 
   _eos_shard_shard_file_read_data (self, buf, blob->size, blob->offs);
-  bytes = g_bytes_new_take (buf, blob->size);
+  GBytes *bytes = g_bytes_new_take (buf, blob->size);
 
   uint32_t csum = adler32 (0L, NULL, 0);
   csum = adler32 (csum, buf, blob->size);
@@ -351,5 +366,5 @@ _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count
 {
   EosShardShardFilePrivate *priv = eos_shard_shard_file_get_instance_private (self);
 
-  return pread (priv->fd, buf, count, priv->hdr.data_offs + offset);
+  return pread (priv->fd, buf, count, priv->data_offs + offset);
 }

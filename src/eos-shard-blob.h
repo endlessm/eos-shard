@@ -44,7 +44,13 @@ struct _EosShardBlob {
   /*< private >*/
   int ref_count;
   EosShardShardFile *shard_file;
-  struct eos_shard_blob_entry *blob;
+
+  char *content_type;
+  uint16_t flags;
+  uint32_t adler32;
+  uint64_t offs;
+  uint64_t size;
+  uint64_t uncompressed_size;
 };
 
 const char * eos_shard_blob_get_content_type (EosShardBlob *blob);
@@ -55,7 +61,7 @@ gsize eos_shard_blob_get_content_size (EosShardBlob *blob);
 EosShardBlob * eos_shard_blob_ref (EosShardBlob *blob);
 void eos_shard_blob_unref (EosShardBlob *blob);
 
-EosShardBlob * _eos_shard_blob_new_for_blob (EosShardShardFile *shard_file, struct eos_shard_blob_entry *blob);
+EosShardBlob * _eos_shard_blob_new_for_variant (EosShardShardFile *shard_file, GVariant *blob_variant);
 gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
 goffset _eos_shard_blob_get_offset (EosShardBlob *blob);
 

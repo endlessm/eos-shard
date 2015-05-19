@@ -32,7 +32,6 @@ eos_shard_headers = \
 	src/eos-shard-enums.h \
 	src/eos-shard-format.h \
 	src/eos-shard-types.h \
-	src/eos-shard-utils.h \
 	$(NULL)
 
 eos_shard_sources = \
