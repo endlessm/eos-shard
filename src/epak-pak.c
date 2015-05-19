@@ -18,9 +18,7 @@
  */
 
 #include "epak-pak.h"
-#include "epak-enums.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -65,27 +63,16 @@ epak_pak_init_internal (GInitable *initable,
   EpakPak *pak = EPAK_PAK (initable);
   EpakPakPrivate *priv = epak_pak_get_instance_private (pak);
 
-  if (!priv->path) {
-    g_set_error (error, EPAK_ERROR, EPAK_ERROR_PAK_PATH_NOT_SET,
-                 "The path was not set for this pak.");
+  if (!priv->path)
     return FALSE;
-  }
 
   priv->fd = open (priv->path, O_RDONLY);
   if (priv->fd < 0) {
-    if (errno == ENOENT)
-      g_set_error (error, EPAK_ERROR, EPAK_ERROR_PAK_NOT_FOUND,
-                   "No file was found at path %s.", priv->path);
-    else
-      g_set_error (error, EPAK_ERROR, EPAK_ERROR_PAK_COULD_NOT_OPEN,
-                   "Could not open pak at path %s.", priv->path);
     return FALSE;
   }
 
   read (priv->fd, &priv->hdr, sizeof (priv->hdr));
   if (memcmp (priv->hdr.magic, EPAK_MAGIC, sizeof (priv->hdr.magic) != 0)) {
-    g_set_error (error, EPAK_ERROR, EPAK_ERROR_PAK_CORRUPT,
-                 "Pak at path %s is corrupted.", priv->path);
     close (priv->fd);
     return FALSE;
   }

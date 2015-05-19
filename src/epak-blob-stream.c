@@ -19,11 +19,7 @@
 
 #include "epak-blob-stream.h"
 #include "epak-blob.h"
-#include "epak-enums.h"
 #include "epak-pak.h"
-
-#include <string.h>
-#include <errno.h>
 
 struct _EpakBlobStreamPrivate
 {
@@ -45,7 +41,6 @@ epak_blob_stream_read (GInputStream  *stream,
   EpakBlobStream *blob_stream;
   EpakBlobStreamPrivate *priv;
   gsize actual_count, size_read;
-  int read_error;
   goffset blob_offset;
 
   blob_stream = EPAK_BLOB_STREAM (stream);
@@ -55,12 +50,6 @@ epak_blob_stream_read (GInputStream  *stream,
   actual_count = MIN (count, _epak_blob_get_packed_size (priv->blob) - priv->pos);
 
   size_read = _epak_pak_read_data (priv->pak, buffer, actual_count, blob_offset + priv->pos);
-  read_error = errno;
-  if (size_read == -1) {
-    g_set_error (error, EPAK_ERROR, EPAK_ERROR_BLOB_STREAM_READ,
-                 "EpakBlobStream read failed: %s", strerror (read_error));
-    return -1;
-  }
   priv->pos += size_read;
   return size_read;
 }
