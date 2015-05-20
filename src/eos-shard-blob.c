@@ -32,6 +32,7 @@ static void
 eos_shard_blob_free (EosShardBlob *blob)
 {
   g_clear_object (&blob->shard_file);
+  g_free (blob->checksum);
   g_free (blob->content_type);
   g_free (blob);
 }
@@ -75,19 +76,14 @@ eos_shard_blob_get_content_type (EosShardBlob *blob)
 GInputStream *
 eos_shard_blob_get_stream (EosShardBlob *blob)
 {
-  GInputStream *blob_stream, *converter_stream;
-  GZlibDecompressor *decompressor;
+  g_autoptr(GInputStream) blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
 
-  blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
-    converter_stream = g_converter_input_stream_new (blob_stream, G_CONVERTER (decompressor));
-    g_object_unref (blob_stream);
-    g_object_unref (decompressor);
-    return converter_stream;
+    g_autoptr(GZlibDecompressor) decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
+    return g_converter_input_stream_new (blob_stream, G_CONVERTER (decompressor));
+  } else {
+    return g_object_ref (blob_stream);
   }
-
-  return blob_stream;
 }
 
 /**
@@ -139,9 +135,10 @@ eos_shard_blob_get_content_size (EosShardBlob *blob)
  * Returns: (transfer full): the blob's data
  */
 GBytes *
-eos_shard_blob_load_contents (EosShardBlob *blob)
+eos_shard_blob_load_contents (EosShardBlob  *blob,
+                              GError       **error)
 {
-  return _eos_shard_shard_file_load_blob (blob->shard_file, blob, NULL);
+  return _eos_shard_shard_file_load_blob (blob->shard_file, blob, error);
 }
 
 EosShardBlob *
@@ -150,10 +147,10 @@ _eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
 {
   EosShardBlob *blob = eos_shard_blob_new ();
   blob->shard_file = g_object_ref (shard_file);
-  g_variant_get (blob_variant, EOS_SHARD_BLOB_ENTRY,
+  g_variant_get (blob_variant, "(s^ayuttt)",
                  &blob->content_type,
+                 &blob->checksum,
                  &blob->flags,
-                 &blob->adler32,
                  &blob->offs,
                  &blob->size,
                  &blob->uncompressed_size);

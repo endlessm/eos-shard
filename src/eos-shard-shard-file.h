@@ -26,32 +26,15 @@
 #include "eos-shard-types.h"
 #include "eos-shard-format.h"
 
-#define EOS_SHARD_TYPE_SHARD_FILE             (eos_shard_shard_file_get_type ())
-#define EOS_SHARD_SHARD_FILE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EOS_SHARD_TYPE_SHARD_FILE, EosShardShardFile))
-#define EOS_SHARD_SHARD_FILE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass),  EOS_SHARD_TYPE_SHARD_FILE, EosShardShardFileClass))
-#define EOS_SHARD_IS_SHARD_FILE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), EOS_SHARD_TYPE_SHARD_FILE))
-#define EOS_SHARD_IS_SHARD_FILE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  EOS_SHARD_TYPE_SHARD_FILE))
-#define EOS_SHARD_SHARD_FILE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  EOS_SHARD_TYPE_SHARD_FILE, EosShardShardFileClass))
-
 /**
  * EosShardShardFile:
  *
  * A handle to a shard file. Allows for fast lookups of #EosShardRecords based on
  * their hex name.
- **/
+ */
 
-typedef struct _EosShardShardFile        EosShardShardFile;
-typedef struct _EosShardShardFileClass   EosShardShardFileClass;
-
-struct _EosShardShardFile {
-  GObject parent;
-};
-
-struct _EosShardShardFileClass {
-  GObjectClass parent_class;
-};
-
-GType eos_shard_shard_file_get_type (void) G_GNUC_CONST;
+#define EOS_SHARD_TYPE_SHARD_FILE (eos_shard_shard_file_get_type ())
+G_DECLARE_FINAL_TYPE (EosShardShardFile, eos_shard_shard_file, EOS_SHARD, SHARD_FILE, GObject)
 
 void eos_shard_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name);
 gboolean eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name);
