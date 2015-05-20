@@ -61,7 +61,7 @@ EosShardRecord * eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile
 GSList * eos_shard_shard_file_list_records (EosShardShardFile *self);
 
 GBytes * _eos_shard_shard_file_load_blob (EosShardShardFile            *self,
-                                          struct eos_shard_blob_entry  *blob,
+                                          EosShardBlob                 *blob,
                                           GError                      **error);
 
 gsize _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset);
