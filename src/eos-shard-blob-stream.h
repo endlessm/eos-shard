@@ -25,33 +25,14 @@
 #include "eos-shard-types.h"
 #include "eos-shard-format.h"
 
-#define EOS_SHARD_TYPE_BLOB_STREAM             (eos_shard_blob_stream_get_type ())
-#define EOS_SHARD_BLOB_STREAM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EOS_SHARD_TYPE_BLOB_STREAM, EosShardBlobStream))
-#define EOS_SHARD_BLOB_STREAM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass),  EOS_SHARD_TYPE_BLOB_STREAM, EosShardBlobStreamClass))
-#define EOS_SHARD_IS_BLOB_STREAM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), EOS_SHARD_TYPE_BLOB_STREAM))
-#define EOS_SHARD_IS_BLOB_STREAM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  EOS_SHARD_TYPE_BLOB_STREAM))
-#define EOS_SHARD_BLOB_STREAM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  EOS_SHARD_TYPE_BLOB_STREAM, EosShardBlobStreamClass))
-
 /**
  * EosShardBlobStream:
  *
  * A #GInputStream to an #EosShardBlob's content.
  */
 
-typedef struct _EosShardBlobStream        EosShardBlobStream;
-typedef struct _EosShardBlobStreamClass   EosShardBlobStreamClass;
-
-struct _EosShardBlobStream
-{
-  GInputStream parent;
-};
-
-struct _EosShardBlobStreamClass
-{
-  GInputStreamClass parent_class;
-};
-
-GType eos_shard_blob_stream_get_type (void) G_GNUC_CONST;
+#define EOS_SHARD_TYPE_BLOB_STREAM (eos_shard_blob_stream_get_type ())
+G_DECLARE_FINAL_TYPE (EosShardBlobStream, eos_shard_blob_stream, EOS_SHARD, BLOB_STREAM, GInputStream)
 
 EosShardBlobStream * _eos_shard_blob_stream_new_for_blob (EosShardBlob *blob, EosShardShardFile *shard_file);
 

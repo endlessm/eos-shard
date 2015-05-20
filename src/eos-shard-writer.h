@@ -23,13 +23,6 @@
 #include <gio/gio.h>
 #include "eos-shard-format.h"
 
-#define EOS_SHARD_TYPE_WRITER             (eos_shard_writer_get_type ())
-#define EOS_SHARD_WRITER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), EOS_SHARD_TYPE_WRITER, EosShardWriter))
-#define EOS_SHARD_WRITER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass),  EOS_SHARD_TYPE_WRITER, EosShardWriterClass))
-#define EOS_SHARD_IS_WRITER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), EOS_SHARD_TYPE_WRITER))
-#define EOS_SHARD_IS_WRITER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  EOS_SHARD_TYPE_WRITER))
-#define EOS_SHARD_WRITER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  EOS_SHARD_TYPE_WRITER, EosShardWriterClass))
-
 /**
  * EosShardWriter:
  *
@@ -39,28 +32,15 @@
  * Files must be added in increasing order based on their name.
  */
 
-typedef struct _EosShardWriter        EosShardWriter;
-typedef struct _EosShardWriterClass   EosShardWriterClass;
+#define EOS_SHARD_TYPE_WRITER (eos_shard_writer_get_type ())
+G_DECLARE_FINAL_TYPE (EosShardWriter, eos_shard_writer, EOS_SHARD, WRITER, GObject)
 
-struct _EosShardWriter
-{
-  GObject parent;
-};
-
-struct _EosShardWriterClass
-{
-  GObjectClass parent_class;
-};
-
-GType eos_shard_writer_get_type (void) G_GNUC_CONST;
-
-void eos_shard_writer_add_record (EosShardWriter *writer,
+void eos_shard_writer_add_record (EosShardWriter *self,
                                   char *hex_name,
                                   GFile *metadata,
                                   EosShardBlobFlags metadata_flags,
                                   GFile *data,
                                   EosShardBlobFlags data_flags);
-void eos_shard_writer_write (EosShardWriter *writer,
-                             char *path);
+void eos_shard_writer_write (EosShardWriter *self, char *path);
 
 #endif /* EOS_SHARD_WRITER_H */

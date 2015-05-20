@@ -25,15 +25,16 @@
 #include <string.h>
 #include <errno.h>
 
-struct _EosShardBlobStreamPrivate
+struct _EosShardBlobStream
 {
+  GInputStream parent;
+
   goffset pos;
   EosShardBlob *blob;
   EosShardShardFile *shard_file;
 };
-typedef struct _EosShardBlobStreamPrivate EosShardBlobStreamPrivate;
 
-G_DEFINE_TYPE_WITH_PRIVATE (EosShardBlobStream, eos_shard_blob_stream, G_TYPE_INPUT_STREAM);
+G_DEFINE_TYPE (EosShardBlobStream, eos_shard_blob_stream, G_TYPE_INPUT_STREAM);
 
 static gssize
 eos_shard_blob_stream_read (GInputStream  *stream,
@@ -42,19 +43,15 @@ eos_shard_blob_stream_read (GInputStream  *stream,
                             GCancellable  *cancellable,
                             GError       **error)
 {
-  EosShardBlobStream *blob_stream;
-  EosShardBlobStreamPrivate *priv;
+  EosShardBlobStream *self = EOS_SHARD_BLOB_STREAM (stream);
   gsize actual_count, size_read;
   int read_error;
   goffset blob_offset;
 
-  blob_stream = EOS_SHARD_BLOB_STREAM (stream);
-  priv = eos_shard_blob_stream_get_instance_private (blob_stream);
+  blob_offset = _eos_shard_blob_get_offset (self->blob);
+  actual_count = MIN (count, _eos_shard_blob_get_packed_size (self->blob) - self->pos);
 
-  blob_offset = _eos_shard_blob_get_offset (priv->blob);
-  actual_count = MIN (count, _eos_shard_blob_get_packed_size (priv->blob) - priv->pos);
-
-  size_read = _eos_shard_shard_file_read_data (priv->shard_file, buffer, actual_count, blob_offset + priv->pos);
+  size_read = _eos_shard_shard_file_read_data (self->shard_file, buffer, actual_count, blob_offset + self->pos);
   read_error = errno;
   if (size_read == -1) {
     g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_STREAM_READ,
@@ -62,7 +59,7 @@ eos_shard_blob_stream_read (GInputStream  *stream,
     return -1;
   }
 
-  priv->pos += size_read;
+  self->pos += size_read;
   return size_read;
 }
 
@@ -77,14 +74,10 @@ eos_shard_blob_stream_close (GInputStream  *stream,
 static void
 eos_shard_blob_stream_dispose (GObject *object)
 {
-  EosShardBlobStream *blob_stream;
-  EosShardBlobStreamPrivate *priv;
+  EosShardBlobStream *self = EOS_SHARD_BLOB_STREAM (object);
 
-  blob_stream = EOS_SHARD_BLOB_STREAM (object);
-  priv = eos_shard_blob_stream_get_instance_private (blob_stream);
-
-  g_clear_pointer (&priv->blob, eos_shard_blob_unref);
-  g_clear_object (&priv->shard_file);
+  g_clear_pointer (&self->blob, eos_shard_blob_unref);
+  g_clear_object (&self->shard_file);
 
   G_OBJECT_CLASS (eos_shard_blob_stream_parent_class)->dispose (object);
 }
@@ -112,14 +105,8 @@ EosShardBlobStream *
 _eos_shard_blob_stream_new_for_blob (EosShardBlob *blob,
                                      EosShardShardFile  *shard_file)
 {
-  EosShardBlobStream *blob_stream;
-  EosShardBlobStreamPrivate *priv;
-
-  blob_stream = g_object_new (EOS_SHARD_TYPE_BLOB_STREAM, NULL);
-  priv = eos_shard_blob_stream_get_instance_private (blob_stream);
-
-  priv->blob = eos_shard_blob_ref (blob);
-  priv->shard_file = g_object_ref (shard_file);
-
-  return blob_stream;
+  EosShardBlobStream *self = g_object_new (EOS_SHARD_TYPE_BLOB_STREAM, NULL);
+  self->blob = eos_shard_blob_ref (blob);
+  self->shard_file = g_object_ref (shard_file);
+  return self;
 }
