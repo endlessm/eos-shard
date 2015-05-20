@@ -37,7 +37,6 @@ struct _EosShardShardFile
 
   char *path;
   int fd;
-  uint64_t data_offs;
   size_t n_records;
   EosShardRecord **records;
 };
@@ -93,9 +92,8 @@ eos_shard_shard_file_init_internal (GInitable *initable,
   g_autoptr(GVariantIter) records_iter;
 
   const char *magic;
-  g_variant_get (header_variant, "(&sta" EOS_SHARD_RECORD_ENTRY ")",
+  g_variant_get (header_variant, "(&sa" EOS_SHARD_RECORD_ENTRY ")",
                  &magic,
-                 &self->data_offs,
                  &records_iter);
 
   if (strcmp (magic, EOS_SHARD_MAGIC) != 0) {
@@ -354,5 +352,5 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
 gsize
 _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset)
 {
-  return pread (self->fd, buf, count, self->data_offs + offset);
+  return pread (self->fd, buf, count, offset);
 }

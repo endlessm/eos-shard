@@ -151,9 +151,7 @@ eos_shard_writer_add_record (EosShardWriter *self,
 }
 
 static void
-write_blob (int fd,
-            int data_offs,
-            struct eos_shard_writer_blob_entry *blob)
+write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
 {
   GFileInputStream *file_stream = g_file_read (blob->file, NULL, NULL);
   g_autoptr(GInputStream) stream;
@@ -166,7 +164,7 @@ write_blob (int fd,
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  blob->offs = lalign (fd) - data_offs;
+  blob->offs = lalign (fd);
 
   uint8_t buf[4096];
   int size, total_size = 0;
@@ -205,7 +203,7 @@ record_entry_variant (struct eos_shard_writer_record_entry *entry)
 }
 
 static GVariant *
-header_entry_variant (uint64_t data_offs, GArray *entries)
+header_entry_variant (GArray *entries)
 {
   GVariantBuilder builder;
 
@@ -219,7 +217,6 @@ header_entry_variant (uint64_t data_offs, GArray *entries)
 
   return g_variant_new (EOS_SHARD_HEADER_ENTRY,
                         EOS_SHARD_MAGIC,
-                        data_offs,
                         &builder);
 }
 
@@ -237,25 +234,24 @@ eos_shard_writer_write (EosShardWriter *self, char *path)
   int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   GVariant *variant;
 
-  variant = header_entry_variant (0, self->entries);
+  variant = header_entry_variant (self->entries);
   uint64_t header_size = g_variant_get_size (variant);
   header_size = htole64 (header_size);
   g_variant_unref (variant);
 
-  uint64_t data_offs = ALIGN (4 + header_size);
-  lseek (fd, data_offs, SEEK_SET);
+  lseek (fd, ALIGN (header_size), SEEK_SET);
 
   int i;
   for (i = 0; i < self->entries->len; i++) {
     struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, i);
 
-    write_blob (fd, data_offs, &e->metadata);
-    write_blob (fd, data_offs, &e->data);
+    write_blob (fd, &e->metadata);
+    write_blob (fd, &e->data);
   }
 
   lseek (fd, 0, SEEK_SET);
   write (fd, &header_size, sizeof (header_size));
-  variant = header_entry_variant (data_offs, self->entries);
+  variant = header_entry_variant (self->entries);
   write_variant (fd, variant);
   g_variant_unref (variant);
 
