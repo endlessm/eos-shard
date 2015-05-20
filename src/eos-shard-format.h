@@ -22,8 +22,6 @@
 
 #include <stdint.h>
 
-#pragma pack(push,1)
-
 /* The base file format consists of a uint64_t, which defines
  * the header's length. After that comes an EOS_SHARD_HEADER_ENTRY. */
 
@@ -46,7 +44,5 @@ typedef enum eos_shard_blob_flags
 
 #define EOS_SHARD_RAW_NAME_SIZE 20
 #define EOS_SHARD_HEX_NAME_SIZE (EOS_SHARD_RAW_NAME_SIZE*2)
-
-#pragma pack(pop)
 
 #endif /* EOS_SHARD_FORMAT_H */
