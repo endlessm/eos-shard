@@ -75,19 +75,14 @@ eos_shard_blob_get_content_type (EosShardBlob *blob)
 GInputStream *
 eos_shard_blob_get_stream (EosShardBlob *blob)
 {
-  GInputStream *blob_stream, *converter_stream;
-  GZlibDecompressor *decompressor;
+  g_autoptr(GInputStream) blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
 
-  blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
-    converter_stream = g_converter_input_stream_new (blob_stream, G_CONVERTER (decompressor));
-    g_object_unref (blob_stream);
-    g_object_unref (decompressor);
-    return converter_stream;
+    g_autoptr(GZlibDecompressor) decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
+    return g_converter_input_stream_new (blob_stream, G_CONVERTER (decompressor));
+  } else {
+    return g_object_ref (blob_stream);
   }
-
-  return blob_stream;
 }
 
 /**

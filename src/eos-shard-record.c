@@ -92,7 +92,8 @@ EosShardRecord *
 _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
 {
   EosShardRecord *record = eos_shard_record_new ();
-  GVariant *metadata_variant, *data_variant;
+  g_autoptr(GVariant) metadata_variant;
+  g_autoptr(GVariant) data_variant;
   record->shard_file = g_object_ref (shard_file);
   g_variant_get (record_variant, "(^ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
                  &record->raw_name,
@@ -100,8 +101,6 @@ _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *reco
                  &data_variant);
   record->metadata = _eos_shard_blob_new_for_variant (shard_file, metadata_variant);
   record->data = _eos_shard_blob_new_for_variant (shard_file, data_variant);
-  g_variant_unref (metadata_variant);
-  g_variant_unref (data_variant);
   return record;
 }
 

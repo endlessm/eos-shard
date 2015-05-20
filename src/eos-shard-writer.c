@@ -111,14 +111,12 @@ eos_shard_writer_init (EosShardWriter *writer)
 static void
 fill_blob_entry_from_gfile (struct eos_shard_writer_blob_entry *blob, GFile *file)
 {
-  GFileInfo *info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
+  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
   const char *ct = g_file_info_get_content_type (info);
 
   blob->file = g_object_ref (file);
   blob->content_type = g_strdup (ct);
   blob->uncompressed_size = g_file_info_get_size (info);
-
-  g_object_unref (info);
 }
 
 /**
@@ -167,13 +165,12 @@ write_blob (int fd,
             struct eos_shard_writer_blob_entry *blob)
 {
   GFileInputStream *file_stream = g_file_read (blob->file, NULL, NULL);
-  GInputStream *stream;
+  g_autoptr(GInputStream) stream;
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    GZlibCompressor *compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
+    g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
     stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
     g_object_unref (file_stream);
-    g_object_unref (compressor);
   } else {
     stream = G_INPUT_STREAM (file_stream);
   }
@@ -190,8 +187,6 @@ write_blob (int fd,
   }
 
   blob->size = total_size;
-
-  g_object_unref (stream);
 }
 
 static GVariant *

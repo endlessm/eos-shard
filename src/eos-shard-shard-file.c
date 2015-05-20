@@ -337,25 +337,19 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   }
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    GInputStream *bytestream;
-    GZlibDecompressor *decompressor;
-    GInputStream *out_stream;
+    g_autoptr(GInputStream) bytestream;
+    g_autoptr(GZlibDecompressor) decompressor;
+    g_autoptr(GInputStream) out_stream;
 
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
     bytestream = g_memory_input_stream_new_from_bytes (bytes);
     g_bytes_unref (bytes);
     out_stream = g_converter_input_stream_new (G_INPUT_STREAM (bytestream), G_CONVERTER (decompressor));
-    g_object_unref (bytestream);
-    g_object_unref (decompressor);
 
-    GError *err = NULL;
+    g_autoptr(GError) err = NULL;
     bytes = g_input_stream_read_bytes (out_stream, blob->uncompressed_size, NULL, &err);
-    if (err != NULL) {
+    if (err != NULL)
       g_warning ("Could not decompress stream: %s", err->message);
-      g_error_free (err);
-    }
-
-    g_object_unref (out_stream);
   }
 
   return bytes;
