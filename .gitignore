@@ -10,7 +10,8 @@ test.shard
 *.so
 *.gir
 *.typelib
-/Makefile.in
+Makefile
+Makefile.in
 /aclocal.m4
 /autom4te.cache/
 /compile
@@ -24,4 +25,6 @@ test.shard
 /config.log
 /config.status
 /libtool
-/Makefile
+/tap-driver.sh
+*.log
+*.trs
