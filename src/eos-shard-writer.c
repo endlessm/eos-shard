@@ -239,7 +239,7 @@ eos_shard_writer_write (EosShardWriter *self, char *path)
   header_size = htole64 (header_size);
   g_variant_unref (variant);
 
-  lseek (fd, ALIGN (header_size), SEEK_SET);
+  lseek (fd, ALIGN (sizeof (header_size) + header_size), SEEK_SET);
 
   int i;
   for (i = 0; i < self->entries->len; i++) {
