@@ -100,17 +100,6 @@ eos_shard_writer_init (EosShardWriter *self)
   g_array_set_clear_func (self->entries, (GDestroyNotify) eos_shard_writer_record_entry_clear);
 }
 
-static void
-fill_blob_entry_from_gfile (struct eos_shard_writer_blob_entry *blob, GFile *file)
-{
-  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
-  const char *ct = g_file_info_get_content_type (info);
-
-  blob->file = g_object_ref (file);
-  blob->content_type = g_strdup (ct);
-  blob->uncompressed_size = g_file_info_get_size (info);
-}
-
 /**
  * eos_shard_writer_add_record:
  * @self: an #EosShardWriter
@@ -158,6 +147,7 @@ get_blob_entry (struct eos_shard_writer_record_entry *e,
  * @self: an #EosShardWriter
  * @which_blob: Which blob in the record
  * @file: a file of contents to write into the shard
+ * @content_type: (nullable): the content-type of the file. Pass %NULL to auto-detect.
  * @flags: flags about how the data should be stored in the file
  *
  * Set the data for a blob entry in the last added record in the file.
@@ -167,13 +157,20 @@ void
 eos_shard_writer_add_blob (EosShardWriter *self,
                            EosShardWriterBlob which_blob,
                            GFile *file,
+                           const char *content_type,
                            EosShardBlobFlags flags)
 {
   struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
   struct eos_shard_writer_blob_entry *b = get_blob_entry (e, which_blob);
 
-  fill_blob_entry_from_gfile (b, file);
+  b->file = g_object_ref (file);
   b->flags = flags;
+
+  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
+  if (!content_type)
+    content_type = g_file_info_get_content_type (info);
+  b->content_type = g_strdup (content_type);
+  b->uncompressed_size = g_file_info_get_size (info);
 }
 
 static void
