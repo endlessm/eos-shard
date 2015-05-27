@@ -40,7 +40,7 @@ struct eos_shard_writer_blob_entry
   GFile *file;
   char *content_type;
   uint16_t flags;
-  uint8_t checksum[64];
+  uint8_t checksum[32];
   uint64_t offs;
   uint64_t size;
   uint64_t uncompressed_size;
@@ -176,6 +176,7 @@ write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
   }
   size_t checksum_buf_len = sizeof (blob->checksum);
   g_checksum_get_digest (checksum, blob->checksum, &checksum_buf_len);
+  g_assert (checksum_buf_len == sizeof (blob->checksum));
 
   blob->size = total_size;
 }
@@ -185,8 +186,8 @@ blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 {
   return g_variant_new ("(s@ayuttt)",
                         blob->content_type,
-                        g_variant_new_from_data (G_VARIANT_TYPE ("ay"), blob->checksum,
-                                                 sizeof (blob->checksum), FALSE, NULL, NULL),
+                        g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), blob->checksum,
+                                                   sizeof (blob->checksum), sizeof (*blob->checksum)),
                         blob->flags,
                         blob->offs,
                         blob->size,
@@ -196,8 +197,9 @@ blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 static GVariant *
 record_entry_variant (struct eos_shard_writer_record_entry *entry)
 {
-  return g_variant_new ("(^ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
-                        entry->raw_name,
+  return g_variant_new ("(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                        g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), entry->raw_name,
+                                                   sizeof (entry->raw_name), sizeof (*entry->raw_name)),
                         blob_entry_variant (&entry->metadata),
                         blob_entry_variant (&entry->data));
 }

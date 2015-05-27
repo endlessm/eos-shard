@@ -92,13 +92,20 @@ EosShardRecord *
 _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
 {
   EosShardRecord *record = eos_shard_record_new ();
+  g_autoptr(GVariant) raw_name_variant;
   g_autoptr(GVariant) metadata_variant;
   g_autoptr(GVariant) data_variant;
+  size_t n_elts;
+  const void *raw_name;
+
   record->shard_file = g_object_ref (shard_file);
-  g_variant_get (record_variant, "(^ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
-                 &record->raw_name,
+  g_variant_get (record_variant, "(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                 &raw_name_variant,
                  &metadata_variant,
                  &data_variant);
+  raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
+  g_assert (n_elts == EOS_SHARD_RAW_NAME_SIZE);
+  record->raw_name = g_memdup (raw_name, EOS_SHARD_RAW_NAME_SIZE);
   record->metadata = _eos_shard_blob_new_for_variant (shard_file, metadata_variant);
   record->data = _eos_shard_blob_new_for_variant (shard_file, data_variant);
   return record;

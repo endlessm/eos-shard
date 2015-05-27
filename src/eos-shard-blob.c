@@ -146,14 +146,21 @@ _eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
                                  GVariant                    *blob_variant)
 {
   EosShardBlob *blob = eos_shard_blob_new ();
+  g_autoptr(GVariant) checksum_variant;
+  size_t n_elts;
+  const void *checksum;
+
   blob->shard_file = g_object_ref (shard_file);
-  g_variant_get (blob_variant, "(s^ayuttt)",
+  g_variant_get (blob_variant, "(s@ayuttt)",
                  &blob->content_type,
-                 &blob->checksum,
+                 &checksum_variant,
                  &blob->flags,
                  &blob->offs,
                  &blob->size,
                  &blob->uncompressed_size);
+  checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
+  g_assert (n_elts == 32);
+  blob->checksum = g_memdup (checksum, 32);
   return blob;
 }
 
