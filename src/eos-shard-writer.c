@@ -196,8 +196,9 @@ blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 static GVariant *
 record_entry_variant (struct eos_shard_writer_record_entry *entry)
 {
-  return g_variant_new ("(^ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
-                        entry->raw_name,
+  return g_variant_new ("(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                        g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), entry->raw_name,
+                                                   sizeof (entry->raw_name), sizeof (*entry->raw_name)),
                         blob_entry_variant (&entry->metadata),
                         blob_entry_variant (&entry->data));
 }
