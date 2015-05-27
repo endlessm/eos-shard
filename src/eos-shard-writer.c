@@ -100,37 +100,21 @@ eos_shard_writer_init (EosShardWriter *self)
   g_array_set_clear_func (self->entries, (GDestroyNotify) eos_shard_writer_record_entry_clear);
 }
 
-static void
-fill_blob_entry_from_gfile (struct eos_shard_writer_blob_entry *blob, GFile *file)
-{
-  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
-  const char *ct = g_file_info_get_content_type (info);
-
-  blob->file = g_object_ref (file);
-  blob->content_type = g_strdup (ct);
-  blob->uncompressed_size = g_file_info_get_size (info);
-}
-
 /**
  * eos_shard_writer_add_record:
  * @self: an #EosShardWriter
  * @hex_name: the hexadecimal string which will act as this entry's ID
- * @metadata: a #GFile pointing to the entry's metadata on disk
- * @metadata_flags: an #EosShardBlobFlags to be applied to the metadata
- * @data: a #GFile pointing to the entry's data on disk
- * @data_flags: an #EosShardBlobFlags to be applied to the data
  *
  * Adds a data/metadata file pair to the shard file. These pairs must be added in
  * increasing hex_name order. Once all pairs have been added, call
  * eos_shard_writer_write() to save the shard file to disk.
+ *
+ * To set the individual fields of the blobs within the record,
+ * use eos_shard_writer_add_blob().
  */
 void
 eos_shard_writer_add_record (EosShardWriter *self,
-                             char *hex_name,
-                             GFile *metadata,
-                             EosShardBlobFlags metadata_flags,
-                             GFile *data,
-                             EosShardBlobFlags data_flags)
+                             char *hex_name)
 {
   struct eos_shard_writer_record_entry record_entry = {};
 
@@ -141,13 +125,52 @@ eos_shard_writer_add_record (EosShardWriter *self,
     g_assert (memcmp (record_entry.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
   }
 
-  fill_blob_entry_from_gfile (&record_entry.metadata, metadata);
-  record_entry.metadata.flags = metadata_flags;
-
-  fill_blob_entry_from_gfile (&record_entry.data, data);
-  record_entry.data.flags = data_flags;
-
   g_array_append_val (self->entries, record_entry);
+}
+
+static struct eos_shard_writer_blob_entry *
+get_blob_entry (struct eos_shard_writer_record_entry *e,
+                EosShardWriterBlob which_blob)
+{
+  switch (which_blob) {
+  case EOS_SHARD_WRITER_BLOB_METADATA:
+    return &e->metadata;
+  case EOS_SHARD_WRITER_BLOB_DATA:
+    return &e->data;
+  default:
+    g_assert_not_reached ();
+  }
+}
+
+/**
+ * eos_shard_writer_add_blob:
+ * @self: an #EosShardWriter
+ * @which_blob: Which blob in the record
+ * @file: a file of contents to write into the shard
+ * @content_type: (nullable): the content-type of the file. Pass %NULL to auto-detect.
+ * @flags: flags about how the data should be stored in the file
+ *
+ * Set the data for a blob entry in the last added record in the file.
+ * Records can be added to the file with eos_shard_writer_add_record().
+ */
+void
+eos_shard_writer_add_blob (EosShardWriter *self,
+                           EosShardWriterBlob which_blob,
+                           GFile *file,
+                           const char *content_type,
+                           EosShardBlobFlags flags)
+{
+  struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
+  struct eos_shard_writer_blob_entry *b = get_blob_entry (e, which_blob);
+
+  b->file = g_object_ref (file);
+  b->flags = flags;
+
+  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
+  if (!content_type)
+    content_type = g_file_info_get_content_type (info);
+  b->content_type = g_strdup (content_type);
+  b->uncompressed_size = g_file_info_get_size (info);
 }
 
 static void

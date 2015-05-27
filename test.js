@@ -22,11 +22,15 @@ const Gio = imports.gi.Gio;
 const EosShard = imports.gi.EosShard;
 
 let shard_writer = new EosShard.Writer();
-shard_writer.add_record("7d97e98f8af710c7e7fe703abc8f639e0ee507c4",
-                        Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json"),
-                        EosShard.BlobFlags.COMPRESSED_ZLIB,
-                        Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob"),
-                        EosShard.BlobFlags.NONE);
+shard_writer.add_record("7d97e98f8af710c7e7fe703abc8f639e0ee507c4");
+shard_writer.add_blob(EosShard.WriterBlob.METADATA,
+                      Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json"),
+                      'application/json',
+                      EosShard.BlobFlags.COMPRESSED_ZLIB);
+shard_writer.add_blob(EosShard.WriterBlob.DATA,
+                      Gio.File.new_for_path("foo/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob"),
+                      null,
+                      EosShard.BlobFlags.NONE);
 shard_writer.write("test.shard");
 
 let shard = new EosShard.ShardFile({ path: 'test.shard' });
