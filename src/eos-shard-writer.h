@@ -35,12 +35,17 @@
 #define EOS_SHARD_TYPE_WRITER (eos_shard_writer_get_type ())
 G_DECLARE_FINAL_TYPE (EosShardWriter, eos_shard_writer, EOS_SHARD, WRITER, GObject)
 
+typedef enum {
+  EOS_SHARD_WRITER_BLOB_METADATA,
+  EOS_SHARD_WRITER_BLOB_DATA,
+} EosShardWriterBlob;
+
 void eos_shard_writer_add_record (EosShardWriter *self,
-                                  char *hex_name,
-                                  GFile *metadata,
-                                  EosShardBlobFlags metadata_flags,
-                                  GFile *data,
-                                  EosShardBlobFlags data_flags);
+                                  char *hex_name);
+void eos_shard_writer_add_blob (EosShardWriter *self,
+                                EosShardWriterBlob which_blob,
+                                GFile *file,
+                                EosShardBlobFlags flags);
 void eos_shard_writer_write (EosShardWriter *self, char *path);
 
 #endif /* EOS_SHARD_WRITER_H */
