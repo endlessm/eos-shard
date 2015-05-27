@@ -186,8 +186,8 @@ blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 {
   return g_variant_new ("(s@ayuttt)",
                         blob->content_type,
-                        g_variant_new_from_data (G_VARIANT_TYPE ("ay"), blob->checksum,
-                                                 sizeof (blob->checksum), FALSE, NULL, NULL),
+                        g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), blob->checksum,
+                                                   sizeof (blob->checksum), sizeof (*blob->checksum)),
                         blob->flags,
                         blob->offs,
                         blob->size,
