@@ -265,11 +265,14 @@ eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *
 {
   EosShardRecord key = { .raw_name = raw_name };
   EosShardRecord *keyp = &key;
+  EosShardRecord **res;
 
-  return bsearch (&keyp,
-                  self->records, self->n_records,
-                  sizeof (EosShardRecord *),
-                  eos_shard_record_entry_cmp);
+  res = bsearch (&keyp,
+                 self->records, self->n_records,
+                 sizeof (EosShardRecord *),
+                 eos_shard_record_entry_cmp);
+
+  return eos_shard_record_ref (*res);
 }
 
 /**
