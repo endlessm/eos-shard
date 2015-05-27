@@ -40,7 +40,7 @@ struct eos_shard_writer_blob_entry
   GFile *file;
   char *content_type;
   uint16_t flags;
-  uint8_t checksum[64];
+  uint8_t checksum[32];
   uint64_t offs;
   uint64_t size;
   uint64_t uncompressed_size;
@@ -176,6 +176,7 @@ write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
   }
   size_t checksum_buf_len = sizeof (blob->checksum);
   g_checksum_get_digest (checksum, blob->checksum, &checksum_buf_len);
+  g_assert (checksum_buf_len == sizeof (blob->checksum));
 
   blob->size = total_size;
 }

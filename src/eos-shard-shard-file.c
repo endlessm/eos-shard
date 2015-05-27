@@ -318,10 +318,11 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   GBytes *bytes = g_bytes_new_take (buf, blob->size);
 
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
-  uint8_t checksum_buf[64];
+  uint8_t checksum_buf[32];
   g_checksum_update (checksum, buf, blob->size);
   size_t checksum_buf_len = sizeof (checksum_buf);
   g_checksum_get_digest (checksum, checksum_buf, &checksum_buf_len);
+  g_assert (checksum_buf_len == sizeof (checksum_buf));
 
   if (memcmp (checksum_buf, blob->checksum, sizeof (checksum_buf) != 0)) {
     g_clear_pointer (&bytes, g_bytes_unref);
