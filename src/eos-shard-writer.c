@@ -176,7 +176,13 @@ eos_shard_writer_add_blob (EosShardWriter *self,
 static void
 write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
 {
-  GFileInputStream *file_stream = g_file_read (blob->file, NULL, NULL);
+  g_autoptr(GError) error = NULL;
+  GFileInputStream *file_stream = g_file_read (blob->file, NULL, &error);
+  if (!file_stream) {
+    g_error ("Could not read from %s: %s", g_file_get_path (blob->file), error->message);
+    return;
+  }
+
   g_autoptr(GInputStream) stream;
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {

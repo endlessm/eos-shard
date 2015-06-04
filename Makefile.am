@@ -66,3 +66,26 @@ girdir = $(datadir)/gir-1.0
 gir_DATA = EosShard-0.gir
 typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = EosShard-0.typelib
+
+JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
+JS_LOG_DRIVER_FLAGS = --comments
+
+TESTS = test/tests.js
+EXTRA_DIST += $(TESTS)
+
+EXTRA_DIST += \
+	test/data/f572d396fae9206628714fb2ce00f72e94f2258f.json	\
+	test/data/f572d396fae9206628714fb2ce00f72e94f2258f.blob	\
+	test/data/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json	\
+	test/data/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob	\
+	test/data/nul_example					\
+	$(NULL)
+
+TEST_EXTENSIONS = .js
+JS_LOG_COMPILER = jasmine
+AM_JS_LOG_FLAGS = --tap --no-config
+AM_TESTS_ENVIRONMENT = \
+	export GI_TYPELIB_PATH="$(top_builddir)$${GI_TYPELIB_PATH:+:$$GI_TYPELIB_PATH}"; \
+	export LD_LIBRARY_PATH="$(top_builddir)/.libs$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}"; \
+	export G_TEST_SRCDIR="$(top_srcdir)/"; \
+	$(NULL)
