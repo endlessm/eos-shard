@@ -81,7 +81,7 @@ EXTRA_DIST += \
 	test/data/f572d396fae9206628714fb2ce00f72e94f2258f.blob	\
 	test/data/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json	\
 	test/data/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob	\
-	test/data/nul_example					\
+	test/data/nul_example \
 	$(NULL)
 
 TEST_EXTENSIONS = .js
