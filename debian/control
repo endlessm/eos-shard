@@ -6,6 +6,7 @@ Build-Depends: autotools-dev,
                gir1.2-glib-2.0,
                gobject-introspection (>= 0.9.7),
                gtk-doc-tools (>= 1.18),
+               jasmine-gjs,
                libgirepository1.0-dev,
                zlib1g-dev
 Standards-Version: 3.9.4
