@@ -70,7 +70,10 @@ typelib_DATA = EosShard-0.typelib
 JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
 
-TESTS = test/tests.js
+TESTS = \
+	test/writerSpec.js \
+	$(NULL)
+
 EXTRA_DIST += $(TESTS)
 
 EXTRA_DIST += \
