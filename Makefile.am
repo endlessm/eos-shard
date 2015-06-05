@@ -70,15 +70,19 @@ typelib_DATA = EosShard-0.typelib
 JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
 
-TESTS = test/tests.js
-EXTRA_DIST += $(TESTS)
+TESTS = \
+	test/writerSpec.js \
+	test/streamSpec.js \
+	$(NULL)
+
+EXTRA_DIST += $(TESTS) test/utils.js
 
 EXTRA_DIST += \
 	test/data/f572d396fae9206628714fb2ce00f72e94f2258f.json	\
 	test/data/f572d396fae9206628714fb2ce00f72e94f2258f.blob	\
 	test/data/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json	\
 	test/data/7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob	\
-	test/data/nul_example					\
+	test/data/nul_example \
 	$(NULL)
 
 TEST_EXTENSIONS = .js

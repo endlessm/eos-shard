@@ -17,17 +17,10 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
 const EosShard = imports.gi.EosShard;
-
-function getTestFile(fn) {
-    let datadir = GLib.getenv('G_TEST_SRCDIR');
-    if (!datadir)
-        datadir = '';
-    return Gio.File.new_for_path(GLib.build_filenamev([datadir, 'test/data', fn]));
-}
+const TestUtils = imports.utils;
 
 describe('Basic Shard Writing', function () {
     afterEach(function() {
@@ -41,11 +34,11 @@ describe('Basic Shard Writing', function () {
 
             shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
             shard_writer.add_blob(EosShard.WriterBlob.METADATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
                                   'application/json',
                                   EosShard.BlobFlags.NONE);
             shard_writer.add_blob(EosShard.WriterBlob.DATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
                                   null,
                                   EosShard.BlobFlags.COMPRESSED_ZLIB);
 
@@ -96,21 +89,21 @@ describe('Basic Shard Writing', function () {
 
             shard_writer.add_record('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
             shard_writer.add_blob(EosShard.WriterBlob.METADATA,
-                                  getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
+                                  TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
                                   'application/json',
                                   EosShard.BlobFlags.COMPRESSED_ZLIB);
             shard_writer.add_blob(EosShard.WriterBlob.DATA,
-                                  getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob'),
+                                  TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob'),
                                   null,
                                   EosShard.BlobFlags.NONE);
 
             shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
             shard_writer.add_blob(EosShard.WriterBlob.METADATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
                                   'application/json',
                                   EosShard.BlobFlags.COMPRESSED_ZLIB);
             shard_writer.add_blob(EosShard.WriterBlob.DATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
                                   null,
                                   EosShard.BlobFlags.NONE);
 
@@ -139,11 +132,11 @@ describe('Basic Shard Writing', function () {
             // The record here has '00's which will translate to NULL bytes.
             shard_writer.add_record('f500000000e9206628714fb2ce00f72e94f2258f');
             shard_writer.add_blob(EosShard.WriterBlob.METADATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
                                   'application/json',
                                   EosShard.BlobFlags.NONE);
             shard_writer.add_blob(EosShard.WriterBlob.DATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
                                   null,
                                   EosShard.BlobFlags.NONE);
             shard_writer.write('test.shard');
@@ -166,11 +159,11 @@ describe('Basic Shard Writing', function () {
             let shard_writer = new EosShard.Writer();
             shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
             shard_writer.add_blob(EosShard.WriterBlob.METADATA,
-                                  getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
                                   'application/json',
                                   EosShard.BlobFlags.NONE);
             shard_writer.add_blob(EosShard.WriterBlob.DATA,
-                                  getTestFile('nul_example'),
+                                  TestUtils.getTestFile('nul_example'),
                                   'text/plain',
                                   EosShard.BlobFlags.NONE);
             shard_writer.write('test.shard');
@@ -201,11 +194,11 @@ describe('Basic Shard Writing', function () {
                 let shard_writer = new EosShard.Writer();
                 shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
                 shard_writer.add_blob(EosShard.WriterBlob.METADATA,
-                                      getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                      TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
                                       content_type,
                                       EosShard.BlobFlags.NONE);
                 shard_writer.add_blob(EosShard.WriterBlob.DATA,
-                                      getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                      TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
                                       'test',
                                       EosShard.BlobFlags.NONE);
                 shard_writer.write('test.shard');

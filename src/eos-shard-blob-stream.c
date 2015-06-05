@@ -34,7 +34,109 @@ struct _EosShardBlobStream
   EosShardShardFile *shard_file;
 };
 
-G_DEFINE_TYPE (EosShardBlobStream, eos_shard_blob_stream, G_TYPE_INPUT_STREAM);
+static void seekable_iface_init (GSeekableIface *iface);
+static goffset eos_shard_blob_stream_tell (GSeekable *seekable);
+static gboolean eos_shard_blob_stream_can_seek (GSeekable *seekable);
+static gboolean eos_shard_blob_stream_seek (GSeekable *seekable,
+                                            goffset offset,
+                                            GSeekType type,
+                                            GCancellable *cancellable,
+                                            GError **error);
+static gboolean eos_shard_blob_stream_can_truncate (GSeekable *seekable);
+static gboolean eos_shard_blob_stream_truncate (GSeekable *seekable,
+                                                goffset offset,
+                                                GCancellable *cancellable,
+                                                GError **error);
+
+G_DEFINE_TYPE_WITH_CODE (EosShardBlobStream, eos_shard_blob_stream, G_TYPE_INPUT_STREAM,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_SEEKABLE, seekable_iface_init));
+
+static void
+seekable_iface_init (GSeekableIface *iface)
+{
+  iface->tell = eos_shard_blob_stream_tell;
+  iface->can_seek = eos_shard_blob_stream_can_seek;
+  iface->seek = eos_shard_blob_stream_seek;
+  iface->can_truncate = eos_shard_blob_stream_can_truncate;
+  iface->truncate_fn = eos_shard_blob_stream_truncate;
+}
+
+static goffset
+eos_shard_blob_stream_tell (GSeekable *seekable)
+{
+  EosShardBlobStream *self = EOS_SHARD_BLOB_STREAM (seekable);
+  return self->pos;
+}
+
+static gboolean
+eos_shard_blob_stream_can_seek (GSeekable *seekable)
+{
+  return TRUE;
+}
+
+// This method implementation is pretty much copied wholesale from Gio's
+// GMemoryInputStream, since the internal models are basically identical
+static gboolean
+eos_shard_blob_stream_seek (GSeekable *seekable,
+                            goffset offset,
+                            GSeekType type,
+                            GCancellable *cancellable,
+                            GError **error)
+{
+  EosShardBlobStream *self;
+  goffset absolute;
+  gsize blob_size;
+
+  self = EOS_SHARD_BLOB_STREAM (seekable);
+  blob_size = _eos_shard_blob_get_packed_size (self->blob);
+
+  switch (type) {
+    case G_SEEK_CUR:
+      absolute = self->pos + offset;
+      break;
+    case G_SEEK_SET:
+      absolute = offset;
+      break;
+    case G_SEEK_END:
+      absolute = blob_size + offset;
+      break;
+    default:
+      g_set_error_literal (error,
+                           G_IO_ERROR,
+                           G_IO_ERROR_INVALID_ARGUMENT,
+                           "Invalid GSeekType supplied");
+      return FALSE;
+  }
+
+  if (absolute < 0 || absolute > blob_size) {
+    g_set_error_literal (error,
+                         G_IO_ERROR,
+                         G_IO_ERROR_INVALID_ARGUMENT,
+                         "Invalid seek request");
+    return FALSE;
+  }
+
+  self->pos = absolute;
+
+  return TRUE;
+}
+
+static gboolean
+eos_shard_blob_stream_can_truncate (GSeekable *seekable)
+{
+  return FALSE;
+}
+
+static gboolean
+eos_shard_blob_stream_truncate (GSeekable *seekable,
+                                goffset offset,
+                                GCancellable *cancellable,
+                                GError **error)
+{
+  g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                       "Truncate not allowed on input stream");
+  return FALSE;
+}
 
 static gssize
 eos_shard_blob_stream_read (GInputStream  *stream,
