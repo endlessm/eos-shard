@@ -72,6 +72,7 @@ JS_LOG_DRIVER_FLAGS = --comments
 
 TESTS = \
 	test/writerSpec.js \
+	test/streamSpec.js \
 	$(NULL)
 
 EXTRA_DIST += $(TESTS) test/utils.js
