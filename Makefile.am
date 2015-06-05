@@ -74,7 +74,7 @@ TESTS = \
 	test/writerSpec.js \
 	$(NULL)
 
-EXTRA_DIST += $(TESTS)
+EXTRA_DIST += $(TESTS) test/utils.js
 
 EXTRA_DIST += \
 	test/data/f572d396fae9206628714fb2ce00f72e94f2258f.json	\
