@@ -272,6 +272,9 @@ eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *
                  sizeof (EosShardRecord *),
                  eos_shard_record_entry_cmp);
 
+  if (res == NULL)
+    return NULL;
+
   return eos_shard_record_ref (*res);
 }
 

@@ -58,6 +58,14 @@ describe('Basic Shard Writing', function () {
             expect(record).not.toBe(null);
         });
 
+        it('should return a null value if record is not found', function () {
+            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            shard_file.init(null);
+
+            let record = shard_file.find_record_by_hex_name('deadbeefdeadbeefdeadbeefdeadbeefbeef');
+            expect(record).toEqual(null);
+        });
+
         it('can read uncompressed contents from a shard file', function() {
             let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
             shard_file.init(null);
