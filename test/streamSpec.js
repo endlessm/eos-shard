@@ -25,7 +25,7 @@ const TestUtils = imports.utils;
 
 describe('EosShardBlobStream', function () {
     afterEach(function () {
-        let file = Gio.File.new_for_path('test.shard');
+        let file = Gio.File.new_for_path(shard_path);
         try {
             file.delete(null);
         } catch (e) {
@@ -34,8 +34,11 @@ describe('EosShardBlobStream', function () {
         }
     });
 
+    let shard_path;
     beforeEach(function () {
         let shard_writer = new EosShard.Writer();
+        let [shard_file, iostream] = Gio.File.new_tmp('XXXXXXX.shard');
+        shard_path = shard_file.get_path();
 
         shard_writer.add_record('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
         shard_writer.add_blob(EosShard.WriterBlob.METADATA,
@@ -57,11 +60,11 @@ describe('EosShardBlobStream', function () {
                               null,
                               EosShard.BlobFlags.NONE);
 
-        shard_writer.write('test.shard');
+        shard_writer.write(shard_path);
     });
 
     it('should be seekable when uncompressed', function () {
-        let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+        let shard_file = new EosShard.ShardFile({ path: shard_path });
         shard_file.init(null);
 
         let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
@@ -70,7 +73,7 @@ describe('EosShardBlobStream', function () {
     });
 
     it('should not be seekable when compressed', function () {
-        let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+        let shard_file = new EosShard.ShardFile({ path: shard_path });
         shard_file.init(null);
 
         let record = shard_file.find_record_by_hex_name('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');

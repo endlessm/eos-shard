@@ -23,8 +23,14 @@ const EosShard = imports.gi.EosShard;
 const TestUtils = imports.utils;
 
 describe('Basic Shard Writing', function () {
+    let shard_path;
+    beforeEach(function() {
+        let [shard_file, iostream] = Gio.File.new_tmp('XXXXXXX.shard');
+        shard_path = shard_file.get_path();
+    });
+
     afterEach(function() {
-        let file = Gio.File.new_for_path('test.shard');
+        let file = Gio.File.new_for_path(shard_path);
         try {
             file.delete(null);
         } catch (e) {
@@ -47,16 +53,16 @@ describe('Basic Shard Writing', function () {
                                   null,
                                   EosShard.BlobFlags.COMPRESSED_ZLIB);
 
-            shard_writer.write('test.shard');
+            shard_writer.write(shard_path);
         });
 
         it('can create a shard file with a single record', function() {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
         });
 
         it('can find a record in a shard file', function() {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
@@ -64,7 +70,7 @@ describe('Basic Shard Writing', function () {
         });
 
         it('should return a null value if record is not found', function () {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('deadbeefdeadbeefdeadbeefdeadbeefbeef');
@@ -72,7 +78,7 @@ describe('Basic Shard Writing', function () {
         });
 
         it('can read uncompressed contents from a shard file', function() {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
@@ -84,7 +90,7 @@ describe('Basic Shard Writing', function () {
         });
 
         it('can read compressed contents from a shard file', function() {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
@@ -120,16 +126,16 @@ describe('Basic Shard Writing', function () {
                                   null,
                                   EosShard.BlobFlags.NONE);
 
-            shard_writer.write('test.shard');
+            shard_writer.write(shard_path);
         });
 
         it('can create a shard file with multiple records', function() {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
         });
 
         it('can list records in a shard file', function() {
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let records = shard_file.list_records();
@@ -152,9 +158,9 @@ describe('Basic Shard Writing', function () {
                                   TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
                                   null,
                                   EosShard.BlobFlags.NONE);
-            shard_writer.write('test.shard');
+            shard_writer.write(shard_path);
 
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f500000000e9206628714fb2ce00f72e94f2258f');
@@ -179,9 +185,9 @@ describe('Basic Shard Writing', function () {
                                   TestUtils.getTestFile('nul_example'),
                                   'text/plain',
                                   EosShard.BlobFlags.NONE);
-            shard_writer.write('test.shard');
+            shard_writer.write(shard_path);
 
-            let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
@@ -214,9 +220,9 @@ describe('Basic Shard Writing', function () {
                                       TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
                                       'test',
                                       EosShard.BlobFlags.NONE);
-                shard_writer.write('test.shard');
+                shard_writer.write(shard_path);
 
-                let shard_file = new EosShard.ShardFile({ path: 'test.shard' });
+                let shard_file = new EosShard.ShardFile({ path: shard_path });
                 shard_file.init(null);
 
                 let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
