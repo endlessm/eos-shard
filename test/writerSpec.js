@@ -25,7 +25,12 @@ const TestUtils = imports.utils;
 describe('Basic Shard Writing', function () {
     afterEach(function() {
         let file = Gio.File.new_for_path('test.shard');
-        file.delete(null);
+        try {
+            file.delete(null);
+        } catch (e) {
+            // we don't really care if the file wasn't created, causing
+            // g_file_delete to throw
+        }
     });
 
     describe('shards with single records', function() {
