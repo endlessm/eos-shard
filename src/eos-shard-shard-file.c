@@ -326,7 +326,14 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
 {
   uint8_t *buf = g_malloc (blob->size);
 
-  _eos_shard_shard_file_read_data (self, buf, blob->size, blob->offs);
+  size_t size_read = _eos_shard_shard_file_read_data (self, buf, blob->size, blob->offs);
+  int read_error = errno;
+  if (size_read == -1) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_STREAM_READ,
+                 "Read failed: %s", strerror (read_error));
+    return NULL;
+  }
+
   GBytes *bytes = g_bytes_new_take (buf, blob->size);
 
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
