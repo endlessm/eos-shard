@@ -104,11 +104,23 @@ _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *reco
                  &metadata_variant,
                  &data_variant);
   raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
-  g_assert (n_elts == EOS_SHARD_RAW_NAME_SIZE);
+  if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
+    goto corrupt;
+
   record->raw_name = g_memdup (raw_name, EOS_SHARD_RAW_NAME_SIZE);
   record->metadata = _eos_shard_blob_new_for_variant (shard_file, metadata_variant);
+  if (!record->metadata)
+    goto corrupt;
+
   record->data = _eos_shard_blob_new_for_variant (shard_file, data_variant);
+  if (!record->data)
+    goto corrupt;
+
   return record;
+
+ corrupt:
+  eos_shard_record_unref (record);
+  return NULL;
 }
 
 G_DEFINE_BOXED_TYPE (EosShardRecord, eos_shard_record,
