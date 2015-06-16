@@ -96,12 +96,8 @@ eos_shard_shard_file_init_internal (GInitable *initable,
                  &magic,
                  &records_iter);
 
-  if (strcmp (magic, EOS_SHARD_MAGIC) != 0) {
-    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
-                 "The shard file at %s is corrupt.", self->path);
-    close (self->fd);
-    return FALSE;
-  }
+  if (strcmp (magic, EOS_SHARD_MAGIC) != 0)
+    goto corrupt;
 
   self->n_records = g_variant_iter_n_children (records_iter);
   self->records = g_new (EosShardRecord *, self->n_records);
@@ -109,11 +105,21 @@ eos_shard_shard_file_init_internal (GInitable *initable,
   GVariant *child;
   int i = 0;
   while ((child = g_variant_iter_next_value (records_iter))) {
-    self->records[i++] = _eos_shard_record_new_for_variant (self, child);
+    EosShardRecord *record = _eos_shard_record_new_for_variant (self, child);
+    if (!record)
+      goto corrupt;
+
+    self->records[i++] = record;
     g_variant_unref (child);
   }
 
   return TRUE;
+
+ corrupt:
+  g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
+               "The shard file at %s is corrupt.", self->path);
+  close (self->fd);
+  return FALSE;
 }
 
 static void
