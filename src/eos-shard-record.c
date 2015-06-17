@@ -39,7 +39,6 @@ eos_shard_record_free (EosShardRecord *record)
   g_clear_object (&record->shard_file);
   g_clear_pointer (&record->data, eos_shard_blob_unref);
   g_clear_pointer (&record->metadata, eos_shard_blob_unref);
-  g_free (record->raw_name);
   g_free (record);
 }
 
@@ -107,7 +106,7 @@ _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *reco
   if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
     goto corrupt;
 
-  record->raw_name = g_memdup (raw_name, EOS_SHARD_RAW_NAME_SIZE);
+  record->raw_name = raw_name;
   record->metadata = _eos_shard_blob_new_for_variant (shard_file, metadata_variant);
   if (!record->metadata)
     goto corrupt;

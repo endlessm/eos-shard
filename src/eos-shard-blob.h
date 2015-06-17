@@ -45,9 +45,9 @@ struct _EosShardBlob {
   int ref_count;
   EosShardShardFile *shard_file;
 
-  char *content_type;
+  const char *content_type;
   uint16_t flags;
-  uint8_t *checksum;
+  const uint8_t *checksum;
   uint64_t offs;
   uint64_t size;
   uint64_t uncompressed_size;

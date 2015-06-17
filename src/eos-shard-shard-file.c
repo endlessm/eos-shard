@@ -192,7 +192,7 @@ eos_shard_shard_file_init (EosShardShardFile *shard_file)
  * Converts a raw SHA-1 hash name into a hexadecimal string.
  */
 void
-eos_shard_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name)
+eos_shard_util_raw_name_to_hex_name (char *hex_name, const uint8_t *raw_name)
 {
   int i;
 
@@ -211,7 +211,7 @@ eos_shard_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name)
  * we could not convert this name, then this function returns %FALSE.
  */
 gboolean
-eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
+eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *hex_name)
 {
   int n = strlen (hex_name);
   if (n < EOS_SHARD_HEX_NAME_SIZE)
