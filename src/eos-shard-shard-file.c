@@ -34,11 +34,10 @@
 struct _EosShardShardFile
 {
   GObject parent;
+  GVariant *header_variant;
 
   char *path;
   int fd;
-  size_t n_records;
-  EosShardRecord **records;
 };
 
 enum
@@ -88,38 +87,20 @@ eos_shard_shard_file_init_internal (GInitable *initable,
   read (self->fd, header_data, header_size);
 
   g_autoptr(GBytes) bytes = g_bytes_new_take (header_data, header_size);
-  g_autoptr(GVariant) header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_HEADER_ENTRY), bytes, FALSE);
-  g_autoptr(GVariantIter) records_iter;
+  self->header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_HEADER_ENTRY), bytes, FALSE);
 
   const char *magic;
-  g_variant_get (header_variant, "(&sa" EOS_SHARD_RECORD_ENTRY ")",
-                 &magic,
-                 &records_iter);
+  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_RECORD_ENTRY ")",
+                 &magic, NULL);
 
-  if (strcmp (magic, EOS_SHARD_MAGIC) != 0)
-    goto corrupt;
-
-  self->n_records = g_variant_iter_n_children (records_iter);
-  self->records = g_new (EosShardRecord *, self->n_records);
-
-  GVariant *child;
-  int i = 0;
-  while ((child = g_variant_iter_next_value (records_iter))) {
-    EosShardRecord *record = _eos_shard_record_new_for_variant (self, child);
-    if (!record)
-      goto corrupt;
-
-    self->records[i++] = record;
-    g_variant_unref (child);
+  if (strcmp (magic, EOS_SHARD_MAGIC) != 0) {
+    close (self->fd);
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
+                 "The shard file at %s is corrupt.", self->path);
+    return FALSE;
   }
 
   return TRUE;
-
- corrupt:
-  g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
-               "The shard file at %s is corrupt.", self->path);
-  close (self->fd);
-  return FALSE;
 }
 
 static void
@@ -170,11 +151,8 @@ eos_shard_shard_file_finalize (GObject *object)
   EosShardShardFile *self = EOS_SHARD_SHARD_FILE (object);
 
   close (self->fd);
-  int i;
-  for (i = 0; i < self->n_records; i++)
-    eos_shard_record_unref (self->records[i]);
-  g_free (self->records);
   g_clear_pointer (&self->path, g_free);
+  g_clear_pointer (&self->header_variant, g_variant_unref);
 
   G_OBJECT_CLASS (eos_shard_shard_file_parent_class)->finalize (object);
 }
@@ -251,12 +229,30 @@ eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name)
   return TRUE;
 }
 
+typedef struct {
+  GVariant *records;
+  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
+} FindRecordByNameKey;
+
 static int
-eos_shard_record_entry_cmp (const void *a_, const void *b_)
+find_record_by_raw_name_compar (const void *key_, const void *item)
 {
-  const EosShardRecord *a = * (const EosShardRecord **) a_;
-  const EosShardRecord *b = * (const EosShardRecord **) b_;
-  return memcmp (a->raw_name, b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
+  const FindRecordByNameKey *key = key_;
+  unsigned index = GPOINTER_TO_UINT (item) - 1;
+  g_autoptr(GVariant) raw_name_variant;
+  size_t n_elts;
+  const uint8_t *raw_name;
+
+  g_variant_get_child (key->records, index,
+                       "(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                       &raw_name_variant, NULL, NULL);
+  raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
+
+  /* If we have a corrupt shard, make the lookup return NULL. */
+  if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
+    return -1;
+
+  return memcmp (key->raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
 /**
@@ -269,19 +265,29 @@ eos_shard_record_entry_cmp (const void *a_, const void *b_)
 EosShardRecord *
 eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *raw_name)
 {
-  EosShardRecord key = { .raw_name = raw_name };
-  EosShardRecord *keyp = &key;
-  EosShardRecord **res;
+  FindRecordByNameKey key;
+  void *res;
 
-  res = bsearch (&keyp,
-                 self->records, self->n_records,
-                 sizeof (EosShardRecord *),
-                 eos_shard_record_entry_cmp);
+  memcpy (key.raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE);
+  g_variant_get (self->header_variant, "(&s@a" EOS_SHARD_RECORD_ENTRY ")",
+                 NULL, &key.records);
+
+  /* This is a bit disgusting, but we're basically using dummy pointers to bsearch
+   * through the GVariant's children. The "pointer" is actually just a 1-based index
+   * of the child. We use 1-based indexes since NULL represents "no match", so we
+   * need to distinguish the first child from no match.
+   */
+  res = bsearch (&key,
+                 GUINT_TO_POINTER (1), g_variant_n_children (key.records), 1,
+                 find_record_by_raw_name_compar);
 
   if (res == NULL)
     return NULL;
 
-  return eos_shard_record_ref (*res);
+  int idx = GPOINTER_TO_UINT (res) - 1;
+  g_autoptr(GVariant) child = g_variant_get_child_value (key.records, idx);
+  g_variant_unref (key.records);
+  return _eos_shard_record_new_for_variant (self, child);
 }
 
 /**
@@ -313,12 +319,22 @@ GSList *
 eos_shard_shard_file_list_records (EosShardShardFile *self)
 {
   GSList *l = NULL;
-  int i;
 
-  for (i = self->n_records - 1; i >= 0; i--)
-    l = g_slist_prepend (l, eos_shard_record_ref (self->records[i]));
+  g_autoptr(GVariantIter) records_iter;
+  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_RECORD_ENTRY ")",
+                 NULL, &records_iter);
 
-  return l;
+  GVariant *child;
+  while ((child = g_variant_iter_next_value (records_iter))) {
+    EosShardRecord *record = _eos_shard_record_new_for_variant (self, child);
+    if (!record)
+      return NULL;
+
+    l = g_slist_prepend (l, record);
+    g_variant_unref (child);
+  }
+
+  return g_slist_reverse (l);
 }
 
 GBytes *
