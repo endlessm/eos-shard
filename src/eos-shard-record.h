@@ -38,7 +38,7 @@ struct _EosShardRecord {
   /*< private >*/
   int ref_count;
   EosShardShardFile *shard_file;
-  uint8_t *raw_name;
+  const uint8_t *raw_name;
 
   /*< public >*/
   EosShardBlob *data;

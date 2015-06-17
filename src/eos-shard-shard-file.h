@@ -36,8 +36,8 @@
 #define EOS_SHARD_TYPE_SHARD_FILE (eos_shard_shard_file_get_type ())
 G_DECLARE_FINAL_TYPE (EosShardShardFile, eos_shard_shard_file, EOS_SHARD, SHARD_FILE, GObject)
 
-void eos_shard_util_raw_name_to_hex_name (char *hex_name, uint8_t *raw_name);
-gboolean eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], char *hex_name);
+void eos_shard_util_raw_name_to_hex_name (char *hex_name, const uint8_t *raw_name);
+gboolean eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *hex_name);
 
 EosShardRecord * eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *raw_name);
 EosShardRecord * eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, char *hex_name);

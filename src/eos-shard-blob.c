@@ -32,8 +32,6 @@ static void
 eos_shard_blob_free (EosShardBlob *blob)
 {
   g_clear_object (&blob->shard_file);
-  g_free (blob->checksum);
-  g_free (blob->content_type);
   g_free (blob);
 }
 
@@ -151,7 +149,7 @@ _eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
   const void *checksum;
 
   blob->shard_file = g_object_ref (shard_file);
-  g_variant_get (blob_variant, "(s@ayuttt)",
+  g_variant_get (blob_variant, "(&s@ayuttt)",
                  &blob->content_type,
                  &checksum_variant,
                  &blob->flags,
@@ -161,7 +159,7 @@ _eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
   checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
   if (n_elts != 32)
     return NULL;
-  blob->checksum = g_memdup (checksum, 32);
+  blob->checksum = checksum;
   return blob;
 }
 
