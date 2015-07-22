@@ -163,20 +163,32 @@ eos_shard_writer_add_blob (EosShardWriter *self,
   struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
   struct eos_shard_writer_blob_entry *b = get_blob_entry (e, which_blob);
 
-  b->file = g_object_ref (file);
   b->flags = flags;
+  if (b->flags & EOS_SHARD_BLOB_FLAG_NO_CONTENTS)
+    {
+      g_assert (b->file == NULL);
+      b->content_type = g_strdup ("");
+    }
+  else
+    {
+      b->file = g_object_ref (file);
 
-  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
-  if (!content_type)
-    content_type = g_file_info_get_content_type (info);
-  b->content_type = g_strdup (content_type);
-  b->uncompressed_size = g_file_info_get_size (info);
+      g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
+      if (!content_type)
+        content_type = g_file_info_get_content_type (info);
+      b->content_type = g_strdup (content_type);
+      b->uncompressed_size = g_file_info_get_size (info);
+    }
 }
 
 static void
 write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
 {
   g_autoptr(GError) error = NULL;
+
+  if (blob->flags & EOS_SHARD_BLOB_FLAG_NO_CONTENTS)
+    return;
+
   GFileInputStream *file_stream = g_file_read (blob->file, NULL, &error);
   if (!file_stream) {
     g_error ("Could not read from %s: %s", g_file_get_path (blob->file), error->message);

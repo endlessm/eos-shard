@@ -69,12 +69,15 @@ eos_shard_blob_get_content_type (EosShardBlob *blob)
  * compressed, the returned stream will be streamed through a
  * #GZlibDecompressor, yielding decompressed data.
  *
- * Returns: (transfer full): a new GInputStream for the blob's data
+ * Returns: (transfer full) (nullable): a new GInputStream for the blob's data
  */
 GInputStream *
 eos_shard_blob_get_stream (EosShardBlob *blob)
 {
   g_autoptr(GInputStream) blob_stream = _eos_shard_shard_file_get_stream_for_blob (blob->shard_file, blob);
+
+  if (blob_stream == NULL)
+    return NULL;
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     g_autoptr(GZlibDecompressor) decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
@@ -130,7 +133,7 @@ eos_shard_blob_get_content_size (EosShardBlob *blob)
  * Synchronously read and return the contents of this
  * blob as a #GBytes.
  *
- * Returns: (transfer full): the blob's data
+ * Returns: (transfer full) (nullable): the blob's data
  */
 GBytes *
 eos_shard_blob_load_contents (EosShardBlob  *blob,

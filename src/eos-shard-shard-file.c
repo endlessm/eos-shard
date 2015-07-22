@@ -370,7 +370,9 @@ load_blob_from_mmap (EosShardShardFile *self, EosShardBlob *blob, GError **error
 static GBytes *
 load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
 {
-  if (self->mmap_data != NULL)
+  if (blob->flags & EOS_SHARD_BLOB_FLAG_NO_CONTENTS)
+    return NULL;
+  else if (self->mmap_data != NULL)
     return load_blob_from_mmap (self, blob, error);
   else
     return load_blob_from_pread (self, blob, error);
@@ -426,7 +428,11 @@ _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count
 GInputStream *
 _eos_shard_shard_file_get_stream_for_blob (EosShardShardFile *self, EosShardBlob *blob)
 {
-  if (self->mmap_data != NULL)
+  if (blob->flags & EOS_SHARD_BLOB_FLAG_NO_CONTENTS)
+    {
+      return NULL;
+    }
+  else if (self->mmap_data != NULL)
     {
       g_autoptr(GBytes) bytes = load_blob_from_mmap (self, blob, NULL);
       return g_memory_input_stream_new_from_bytes (bytes);
