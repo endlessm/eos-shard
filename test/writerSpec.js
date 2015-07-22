@@ -100,6 +100,31 @@ describe('Basic Shard Writing', function () {
             let data = record.data.load_contents().get_data().toString();
             expect(data).toMatch(/Lightsaber/);
         });
+        it('can read uncompressed contents from a shard file', function() {
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+            shard_file.mmap();
+
+            let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+            expect(record).not.toBe(null);
+            expect(record.metadata.get_flags() & EosShard.BlobFlags.COMPRESSED_ZLIB).not.toBeTruthy();
+
+            let metadata = record.metadata.load_contents().get_data().toString();
+            expect(metadata).toMatch(/eggs/);
+        });
+
+        it('can read compressed contents from a shard file', function() {
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+            shard_file.mmap();
+
+            let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+            expect(record).not.toBe(null);
+            expect(record.data.get_flags() & EosShard.BlobFlags.COMPRESSED_ZLIB).toBeTruthy();
+
+            let data = record.data.load_contents().get_data().toString();
+            expect(data).toMatch(/Lightsaber/);
+        });
     });
 
     describe('multiple record shards', function() {

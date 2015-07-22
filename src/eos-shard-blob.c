@@ -74,7 +74,7 @@ eos_shard_blob_get_content_type (EosShardBlob *blob)
 GInputStream *
 eos_shard_blob_get_stream (EosShardBlob *blob)
 {
-  g_autoptr(GInputStream) blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
+  g_autoptr(GInputStream) blob_stream = _eos_shard_shard_file_get_stream_for_blob (blob->shard_file, blob);
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     g_autoptr(GZlibDecompressor) decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);

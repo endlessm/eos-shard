@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #include "eos-shard-enums.h"
 #include "eos-shard-format.h"
@@ -38,6 +40,9 @@ struct _EosShardShardFile
 
   char *path;
   int fd;
+
+  void *mmap_data;
+  off_t mmap_size;
 };
 
 enum
@@ -149,6 +154,9 @@ static void
 eos_shard_shard_file_finalize (GObject *object)
 {
   EosShardShardFile *self = EOS_SHARD_SHARD_FILE (object);
+
+  if (self->mmap_data != NULL)
+    munmap (self->mmap_data, self->mmap_size);
 
   close (self->fd);
   g_clear_pointer (&self->path, g_free);
@@ -337,8 +345,8 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
   return g_slist_reverse (l);
 }
 
-GBytes *
-_eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
+static GBytes *
+load_blob_from_pread (EosShardShardFile *self, EosShardBlob *blob, GError **error)
 {
   uint8_t *buf = g_malloc (blob->size);
 
@@ -350,11 +358,35 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
     return NULL;
   }
 
-  GBytes *bytes = g_bytes_new_take (buf, blob->size);
+  return g_bytes_new_take (buf, blob->size);
+}
+
+static GBytes *
+load_blob_from_mmap (EosShardShardFile *self, EosShardBlob *blob, GError **error)
+{
+  return g_bytes_new_static (self->mmap_data + blob->offs, blob->size);
+}
+
+static GBytes *
+load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
+{
+  if (self->mmap_data != NULL)
+    return load_blob_from_mmap (self, blob, error);
+  else
+    return load_blob_from_pread (self, blob, error);
+}
+
+GBytes *
+_eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
+{
+  GBytes *bytes = load_blob (self, blob, error);
+
+  if (bytes == NULL)
+    return NULL;
 
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
   uint8_t checksum_buf[32];
-  g_checksum_update (checksum, buf, blob->size);
+  g_checksum_update (checksum, g_bytes_get_data (bytes, NULL), g_bytes_get_size (bytes));
   size_t checksum_buf_len = sizeof (checksum_buf);
   g_checksum_get_digest (checksum, checksum_buf, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (checksum_buf));
@@ -389,4 +421,61 @@ gsize
 _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset)
 {
   return pread (self->fd, buf, count, offset);
+}
+
+GInputStream *
+_eos_shard_shard_file_get_stream_for_blob (EosShardShardFile *self, EosShardBlob *blob)
+{
+  if (self->mmap_data != NULL)
+    {
+      g_autoptr(GBytes) bytes = load_blob_from_mmap (self, blob, NULL);
+      return g_memory_input_stream_new_from_bytes (bytes);
+    }
+  else
+    {
+      return G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, self));
+    }
+}
+
+static off_t
+get_file_size (int fd)
+{
+  struct stat statbuf = {};
+  fstat (fd, &statbuf);
+  return statbuf.st_size;
+}
+
+/**
+ * eos_shard_shard_file_mmap:
+ * @self: An #EosShardShardFile
+ *
+ * Maps the entire shard file into memory, effectively "preloading"
+ * it for fast access. This should only be used for shards that are
+ * relatively small in size, and are accessed relatively often, so
+ * that clients don't run out of memory trying to map the shard.
+ *
+ * This function doesn't return anything, but simply changes the
+ * behavior of eos_shard_blob_load_contents() and
+ * eos_shard_blob_get_stream().
+ *
+ * You can use eos_shard_shard_file_is_mmapped() to determine if a
+ * shard has been memory-mapped, in case you might want to prefer
+ * calling eos_shard_blob_load_contents() over the input stream.
+ *
+ * Calling this function on an already mapped shard simply returns
+ * without throwing errors.
+ *
+ * Since pointers that might have been returned are not copied,
+ * it is currently not possible to unmap a shard. Please only map
+ * shards that will be required for the entire course of the
+ * application.
+ */
+void
+eos_shard_shard_file_mmap (EosShardShardFile *self)
+{
+  if (self->mmap_data != NULL)
+    return;
+
+  self->mmap_size = get_file_size (self->fd);
+  self->mmap_data = mmap (NULL, self->mmap_size, PROT_READ, MAP_PRIVATE, self->fd, 0);
 }

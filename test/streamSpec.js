@@ -80,4 +80,51 @@ describe('EosShardBlobStream', function () {
         let dataStream = record.data.get_stream();
         expect(GObject.type_is_a(dataStream, Gio.Seekable)).toBe(false);
     });
+
+    it('should be able to read uncompressed data', function() {
+        let shard_file = new EosShard.ShardFile({ path: shard_path });
+        shard_file.init(null);
+
+        let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+        let dataStream = record.data.get_stream();
+        let bytes = dataStream.read_bytes(0x100, null);
+        let data = bytes.get_data().toString();
+        expect(data).toMatch(/Lightsaber/);
+    });
+
+    it('should be able to read compressed data', function() {
+        let shard_file = new EosShard.ShardFile({ path: shard_path });
+        shard_file.init(null);
+
+        let record = shard_file.find_record_by_hex_name('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
+        let dataStream = record.data.get_stream();
+        let bytes = dataStream.read_bytes(0x100, null);
+        let data = bytes.get_data().toString();
+        expect(data).toMatch(/hello/);
+    });
+
+    it('should be able to read uncompressed data from a mmap\'d shard', function() {
+        let shard_file = new EosShard.ShardFile({ path: shard_path });
+        shard_file.init(null);
+        shard_file.mmap();
+
+        let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+        let dataStream = record.data.get_stream();
+        expect(GObject.type_is_a(dataStream, Gio.MemoryInputStream)).toBe(true);
+        let bytes = dataStream.read_bytes(0x100, null);
+        let data = bytes.get_data().toString();
+        expect(data).toMatch(/Lightsaber/);
+    });
+
+    it('should be able to read compressed data from a mmap\'d shard', function() {
+        let shard_file = new EosShard.ShardFile({ path: shard_path });
+        shard_file.init(null);
+        shard_file.mmap();
+
+        let record = shard_file.find_record_by_hex_name('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
+        let dataStream = record.data.get_stream();
+        let bytes = dataStream.read_bytes(0x100, null);
+        let data = bytes.get_data().toString();
+        expect(data).toMatch(/hello/);
+    });
 });

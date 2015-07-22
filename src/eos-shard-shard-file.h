@@ -43,11 +43,15 @@ EosShardRecord * eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile
 EosShardRecord * eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, char *hex_name);
 GSList * eos_shard_shard_file_list_records (EosShardShardFile *self);
 
+void eos_shard_shard_file_mmap (EosShardShardFile *self);
+
 GBytes * _eos_shard_shard_file_load_blob (EosShardShardFile            *self,
                                           EosShardBlob                 *blob,
                                           GError                      **error);
 
 gsize _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset);
+
+GInputStream * _eos_shard_shard_file_get_stream_for_blob (EosShardShardFile *self, EosShardBlob *blob);
 
 #endif /* EOS_SHARD_SHARD_FILE_H */
 
