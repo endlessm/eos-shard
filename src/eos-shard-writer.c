@@ -293,10 +293,14 @@ eos_shard_writer_write (EosShardWriter *self, char *path)
   lseek (fd, ALIGN (sizeof (header_size) + header_size), SEEK_SET);
 
   int i;
+
   for (i = 0; i < self->entries->len; i++) {
     struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, i);
-
     write_blob (fd, &e->metadata);
+  }
+
+  for (i = 0; i < self->entries->len; i++) {
+    struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, i);
     write_blob (fd, &e->data);
   }
 
