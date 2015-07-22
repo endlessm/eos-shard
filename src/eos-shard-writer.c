@@ -259,6 +259,14 @@ write_variant (int fd, GVariant *variant)
                 g_variant_get_size (variant));
 }
 
+/**
+ * eos_shard_writer_write:
+ * @self: An #EosShardWriter
+ * @path: The file path to write the shard to.
+ *
+ * This finalizes the shard and writes the contents to the file path
+ * specified. Meant as the final step in compiling a shard file together.
+ */
 void
 eos_shard_writer_write (EosShardWriter *self, char *path)
 {
