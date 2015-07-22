@@ -25,7 +25,7 @@
 /* The base file format consists of a uint64_t, which defines
  * the header's length. After that comes an EOS_SHARD_HEADER_ENTRY. */
 
-typedef enum eos_shard_blob_flags
+typedef enum
 {
   EOS_SHARD_BLOB_FLAG_NONE,
   EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB,

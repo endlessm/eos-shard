@@ -46,7 +46,7 @@ struct _EosShardBlob {
   EosShardShardFile *shard_file;
 
   const char *content_type;
-  uint16_t flags;
+  EosShardBlobFlags flags;
   const uint8_t *checksum;
   uint64_t offs;
   uint64_t size;
