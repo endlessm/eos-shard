@@ -47,7 +47,8 @@ eos_shard_sources = \
 	src/eos-shard-enums.c \
 	$(NULL)
 
-pkginclude_HEADERS = $(eos_shard_headers)
+shardincludedir = $(includedir)/@SHARD_API_NAME@/@PACKAGE_NAME@
+shardinclude_HEADERS = $(eos_shard_headers)
 
 lib_LTLIBRARIES = libeos-shard.la
 libeos_shard_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
