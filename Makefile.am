@@ -20,7 +20,7 @@ CLEANFILES =
 
 AM_CFLAGS = $(LIBEOS_SHARD_CFLAGS)
 
-INTROSPECTION_GIRS = EosShard-0.gir
+INTROSPECTION_GIRS = EosShard-@SHARD_API_VERSION@.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 eos_shard_headers = \
@@ -65,20 +65,26 @@ libeos_shard_@SHARD_API_VERSION@_la_LDFLAGS = \
 
 include $(INTROSPECTION_MAKEFILE)
 
-EosShard-0.gir: libeos-shard-@SHARD_API_VERSION@.la
-EosShard_0_gir_INCLUDES = GLib-2.0 Gio-2.0
-EosShard_0_gir_CFLAGS = $(AM_CFLAGS)
-EosShard_0_gir_LIBS = libeos-shard-@SHARD_API_VERSION@.la
-EosShard_0_gir_FILES = $(eos_shard_headers) $(eos_shard_sources)
-EosShard_0_gir_SCANNERFLAGS = --identifier-prefix=eos_shard_ --identifier-prefix=EosShard
-CLEANFILES += EosShard-0.gir EosShard-0.typelib
+EosShard-@SHARD_API_VERSION@.gir: libeos-shard-@SHARD_API_VERSION@.la
+EosShard_@SHARD_API_VERSION@_gir_INCLUDES = GLib-2.0 Gio-2.0
+EosShard_@SHARD_API_VERSION@_gir_CFLAGS = $(AM_CFLAGS)
+EosShard_@SHARD_API_VERSION@_gir_LIBS = libeos-shard-@SHARD_API_VERSION@.la
+EosShard_@SHARD_API_VERSION@_gir_FILES = \
+	$(eos_shard_headers) \
+	$(eos_shard_sources) \
+	$(NULL)
+EosShard_@SHARD_API_VERSION@_gir_SCANNERFLAGS = \
+	--identifier-prefix=eos_shard_ \
+	--identifier-prefix=EosShard \
+	$(NULL)
 
 EXTRA_DIST = debian README.md
 
 girdir = $(datadir)/gir-1.0
-gir_DATA = EosShard-0.gir
+gir_DATA = $(INTROSPECTION_GIRS)
 typelibdir = $(libdir)/girepository-1.0
-typelib_DATA = EosShard-0.typelib
+typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
 
 JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
