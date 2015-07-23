@@ -50,21 +50,25 @@ eos_shard_sources = \
 shardincludedir = $(includedir)/@SHARD_API_NAME@/@PACKAGE_NAME@
 shardinclude_HEADERS = $(eos_shard_headers)
 
-lib_LTLIBRARIES = libeos-shard.la
-libeos_shard_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
-libeos_shard_la_SOURCES = \
+lib_LTLIBRARIES = libeos-shard-@SHARD_API_VERSION@.la
+libeos_shard_@SHARD_API_VERSION@_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
+libeos_shard_@SHARD_API_VERSION@_la_SOURCES = \
 	$(eos_shard_headers) \
 	$(eos_shard_private_headers) \
 	$(eos_shard_sources) \
 	$(NULL)
-libeos_shard_la_LIBADD = $(LIBEOS_SHARD_LIBS)
+libeos_shard_@SHARD_API_VERSION@_la_LIBADD = $(LIBEOS_SHARD_LIBS)
+libeos_shard_@SHARD_API_VERSION@_la_LDFLAGS = \
+	-version-info @SHARD_LT_VERSION@ \
+	$(AM_LDFLAGS) \
+	$(NULL)
 
 include $(INTROSPECTION_MAKEFILE)
 
-EosShard-0.gir: libeos-shard.la
+EosShard-0.gir: libeos-shard-@SHARD_API_VERSION@.la
 EosShard_0_gir_INCLUDES = GLib-2.0 Gio-2.0
 EosShard_0_gir_CFLAGS = $(AM_CFLAGS)
-EosShard_0_gir_LIBS = libeos-shard.la
+EosShard_0_gir_LIBS = libeos-shard-@SHARD_API_VERSION@.la
 EosShard_0_gir_FILES = $(eos_shard_headers) $(eos_shard_sources)
 EosShard_0_gir_SCANNERFLAGS = --identifier-prefix=eos_shard_ --identifier-prefix=EosShard
 CLEANFILES += EosShard-0.gir EosShard-0.typelib

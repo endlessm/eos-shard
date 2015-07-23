@@ -24,8 +24,10 @@ m4_define([_SHARD_API_VERSION_MACRO], [0])
 dnl Before making a release, the three macros below should be modified.
 dnl Minor and micro versions: increment micro version when making a release.
 dnl Minor version is even for a stable release and odd for a development release.
+dnl When making any release, if the API changes, set the interface age to 0.
 m4_define([_SHARD_MINOR_VERSION_MACRO], [0])
 m4_define([_SHARD_MICRO_VERSION_MACRO], [0])
+m4_define([_SHARD_INTERFACE_AGE_MACRO], [0])
 dnl Full version, for use in AC_INIT
 m4_define([_SHARD_VERSION_MACRO],
     [_SHARD_API_VERSION_MACRO._SHARD_MINOR_VERSION_MACRO._SHARD_MICRO_VERSION_MACRO])
@@ -43,6 +45,13 @@ AC_DEFINE([SHARD_MAJOR_VERSION], [_SHARD_API_VERSION_MACRO], [Major (API) versio
 AC_SUBST([SHARD_API_NAME], ["eos-shard-$SHARD_API_VERSION"])
 AC_DEFINE([SHARD_MINOR_VERSION], [_SHARD_MINOR_VERSION_MACRO], [Minor version])
 AC_DEFINE([SHARD_MICRO_VERSION], [_SHARD_MICRO_VERSION_MACRO], [Micro version])
+
+# Shared library versioning; calculated automatically.
+# See http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
+SHARD_LT_CURRENT=m4_eval(100 * _SHARD_MINOR_VERSION_MACRO + _SHARD_MICRO_VERSION_MACRO - _SHARD_INTERFACE_AGE_MACRO)
+SHARD_LT_REVISION=_SHARD_INTERFACE_AGE_MACRO
+SHARD_LT_AGE=$SHARD_LT_CURRENT
+AC_SUBST([SHARD_LT_VERSION], ["$SHARD_LT_CURRENT:$SHARD_LT_REVISION:$SHARD_LT_AGE"])
 
 PKG_PROG_PKG_CONFIG
 
