@@ -16,10 +16,33 @@ dnl You should have received a copy of the GNU Lesser General Public
 dnl License along with eos-shard.  If not, see
 dnl <http://www.gnu.org/licenses/>.
 
-AC_INIT([eos-shard], [0],
+dnl Version numbers
+dnl ---------------
+dnl API name and version for pkg-config; increment when breaking API/ABI.
+dnl This version number is also the major version number.
+m4_define([_SHARD_API_VERSION_MACRO], [0])
+dnl Before making a release, the three macros below should be modified.
+dnl Minor and micro versions: increment micro version when making a release.
+dnl Minor version is even for a stable release and odd for a development release.
+m4_define([_SHARD_MINOR_VERSION_MACRO], [0])
+m4_define([_SHARD_MICRO_VERSION_MACRO], [0])
+dnl Full version, for use in AC_INIT
+m4_define([_SHARD_VERSION_MACRO],
+    [_SHARD_API_VERSION_MACRO._SHARD_MINOR_VERSION_MACRO._SHARD_MICRO_VERSION_MACRO])
+
+AC_INIT([eos-shard], [_SHARD_VERSION_MACRO],
     [], [eos-shard], [http://endlessm.com])
 AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign 1.11 tar-ustar no-dist-gzip dist-xz subdir-objects])
 AM_SILENT_RULES([yes])
+
+# Variables to define
+# -------------------
+# Version numbers and associated macros
+AC_SUBST([SHARD_API_VERSION], [_SHARD_API_VERSION_MACRO])
+AC_DEFINE([SHARD_MAJOR_VERSION], [_SHARD_API_VERSION_MACRO], [Major (API) version])
+AC_SUBST([SHARD_API_NAME], ["eos-shard-$SHARD_API_VERSION"])
+AC_DEFINE([SHARD_MINOR_VERSION], [_SHARD_MINOR_VERSION_MACRO], [Minor version])
+AC_DEFINE([SHARD_MICRO_VERSION], [_SHARD_MICRO_VERSION_MACRO], [Micro version])
 
 PKG_PROG_PKG_CONFIG
 
