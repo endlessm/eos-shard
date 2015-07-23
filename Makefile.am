@@ -34,6 +34,10 @@ eos_shard_headers = \
 	src/eos-shard-types.h \
 	$(NULL)
 
+eos_shard_private_headers = \
+	config.h \
+	$(NULL)
+
 eos_shard_sources = \
 	src/eos-shard-shard-file.c \
 	src/eos-shard-record.c \
@@ -47,7 +51,11 @@ pkginclude_HEADERS = $(eos_shard_headers)
 
 lib_LTLIBRARIES = libeos-shard.la
 libeos_shard_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
-libeos_shard_la_SOURCES = $(eos_shard_headers) $(eos_shard_sources)
+libeos_shard_la_SOURCES = \
+	$(eos_shard_headers) \
+	$(eos_shard_private_headers) \
+	$(eos_shard_sources) \
+	$(NULL)
 libeos_shard_la_LIBADD = $(LIBEOS_SHARD_LIBS)
 
 include $(INTROSPECTION_MAKEFILE)
