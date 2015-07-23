@@ -16,7 +16,9 @@
 ## License along with eos-shard.  If not, see
 ## <http://www.gnu.org/licenses/>.
 
+DISTCLEANFILES =
 CLEANFILES =
+EXTRA_DIST = debian README.md
 
 AM_CFLAGS = $(LIBEOS_SHARD_CFLAGS)
 
@@ -63,6 +65,15 @@ libeos_shard_@SHARD_API_VERSION@_la_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(NULL)
 
+# Note that the template file is called eos-shard.pc.in, but generates a
+# versioned .pc file using some magic in AC_CONFIG_FILES, thanks to
+# https://developer.gnome.org/programming-guidelines/unstable/parallel-installability.html.en#pkg-config
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = @SHARD_API_NAME@.pc
+
+DISTCLEANFILES += $(pkgconfig_DATA)
+EXTRA_DIST += eos-shard.pc.in
+
 include $(INTROSPECTION_MAKEFILE)
 
 EosShard-@SHARD_API_VERSION@.gir: libeos-shard-@SHARD_API_VERSION@.la
@@ -77,8 +88,6 @@ EosShard_@SHARD_API_VERSION@_gir_SCANNERFLAGS = \
 	--identifier-prefix=eos_shard_ \
 	--identifier-prefix=EosShard \
 	$(NULL)
-
-EXTRA_DIST = debian README.md
 
 girdir = $(datadir)/gir-1.0
 gir_DATA = $(INTROSPECTION_GIRS)

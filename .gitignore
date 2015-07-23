@@ -27,3 +27,4 @@ Makefile.in
 /tap-driver.sh
 *.log
 *.trs
+eos-shard-*.pc
