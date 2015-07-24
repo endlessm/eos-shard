@@ -9,6 +9,9 @@ test.shard
 *.o
 *.so
 *.gir
+*.gcda
+*.gcno
+_coverage/
 *.typelib
 Makefile
 Makefile.in

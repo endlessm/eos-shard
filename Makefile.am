@@ -90,12 +90,15 @@ typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
 CLEANFILES += $(gir_DATA) $(typelib_DATA)
 
+@EOS_COVERAGE_RULES@
+
 JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
 
 TESTS = \
 	test/writerSpec.js \
 	test/streamSpec.js \
+	run_coverage.coverage \
 	$(NULL)
 
 EXTRA_DIST += $(TESTS) test/utils.js
@@ -108,7 +111,11 @@ EXTRA_DIST += \
 	test/data/nul_example \
 	$(NULL)
 
-TEST_EXTENSIONS = .js
+
+AM_CFLAGS += @EOS_C_COVERAGE_CFLAGS@
+AM_LDFLAGS = @EOS_C_COVERAGE_LDFLAGS@
+
+TEST_EXTENSIONS = .js .coverage
 JS_LOG_COMPILER = jasmine
 AM_JS_LOG_FLAGS = --tap --no-config
 AM_TESTS_ENVIRONMENT = \
@@ -116,3 +123,5 @@ AM_TESTS_ENVIRONMENT = \
 	export LD_LIBRARY_PATH="$(top_builddir)/.libs$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}"; \
 	export G_TEST_SRCDIR="$(top_srcdir)/"; \
 	$(NULL)
+
+clean-local: clean-coverage

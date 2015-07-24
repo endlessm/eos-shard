@@ -37,6 +37,9 @@ AC_INIT([eos-shard], [_SHARD_VERSION_MACRO],
 AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign 1.11 tar-ustar no-dist-gzip dist-xz subdir-objects])
 AM_SILENT_RULES([yes])
 
+# Keep Autotools macros local to this source tree
+AC_CONFIG_MACRO_DIR([m4])
+
 # Variables to define
 # -------------------
 # Version numbers and associated macros
@@ -71,6 +74,9 @@ PKG_CHECK_MODULES([LIBEOS_SHARD], [
 ])
 
 GOBJECT_INTROSPECTION_REQUIRE([1.30])
+
+# Code coverage reports support
+EOS_COVERAGE_REPORT([c])
 
 AC_CONFIG_FILES([
     eos-shard-$SHARD_API_VERSION.pc:eos-shard.pc.in
