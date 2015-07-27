@@ -195,7 +195,7 @@ write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
 
   blob->offs = lalign (fd);
 
-  uint8_t buf[4096];
+  uint8_t buf[4096*4];
   int size, total_size = 0;
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
   while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
