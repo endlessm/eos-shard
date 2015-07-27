@@ -36,10 +36,6 @@ eos_shard_headers = \
 	src/eos-shard-types.h \
 	$(NULL)
 
-eos_shard_private_headers = \
-	config.h \
-	$(NULL)
-
 eos_shard_sources = \
 	src/eos-shard-shard-file.c \
 	src/eos-shard-record.c \
@@ -56,7 +52,6 @@ lib_LTLIBRARIES = libeos-shard-@SHARD_API_VERSION@.la
 libeos_shard_@SHARD_API_VERSION@_la_CPPFLAGS = -Wall -Werror -I $(srcdir)
 libeos_shard_@SHARD_API_VERSION@_la_SOURCES = \
 	$(eos_shard_headers) \
-	$(eos_shard_private_headers) \
 	$(eos_shard_sources) \
 	$(NULL)
 libeos_shard_@SHARD_API_VERSION@_la_LIBADD = $(LIBEOS_SHARD_LIBS)
