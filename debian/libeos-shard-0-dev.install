@@ -1,3 +1,4 @@
 usr/include/eos-shard*/*
 usr/lib/libeos-shard*.so
 usr/share/gir-1.0/EosShard*.gir
+usr/lib/pkgconfig/eos-shard*.pc
