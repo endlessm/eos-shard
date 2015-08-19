@@ -32,3 +32,4 @@ Makefile.in
 *.trs
 eos-shard-*.pc
 stamp-h1
+run_coverage.coverage
