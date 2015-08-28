@@ -92,6 +92,10 @@ CLEANFILES += $(gir_DATA) $(typelib_DATA)
 
 @EOS_COVERAGE_RULES@
 
+if EOS_ENABLE_COVERAGE
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-coverage --with-coverage-dir=@EOS_COVERAGE_DIR@
+endif EOS_ENABLE_COVERAGE
+
 JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
 
