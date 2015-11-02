@@ -64,6 +64,6 @@ void eos_shard_blob_unref (EosShardBlob *blob);
 
 EosShardBlob * _eos_shard_blob_new_for_variant (EosShardShardFile *shard_file, GVariant *blob_variant);
 gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
-goffset _eos_shard_blob_get_offset (EosShardBlob *blob);
+goffset eos_shard_blob_get_offset (EosShardBlob *blob);
 
 #endif /* EOS_SHARD_BLOB_H */
