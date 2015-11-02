@@ -150,7 +150,7 @@ eos_shard_blob_stream_read (GInputStream  *stream,
   int read_error;
   goffset blob_offset;
 
-  blob_offset = _eos_shard_blob_get_offset (self->blob);
+  blob_offset = eos_shard_blob_get_offset (self->blob);
   actual_count = MIN (count, _eos_shard_blob_get_packed_size (self->blob) - self->pos);
 
   size_read = _eos_shard_shard_file_read_data (self->shard_file, buffer, actual_count, blob_offset + self->pos);
