@@ -50,8 +50,10 @@ enum
 static GParamSpec *obj_props[LAST_PROP] = { NULL, };
 
 static void initable_iface_init (GInitableIface *iface);
+static void async_initable_iface_init (GAsyncInitableIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (EosShardShardFile, eos_shard_shard_file, G_TYPE_OBJECT,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_ASYNC_INITABLE, async_initable_iface_init)
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init))
 
 static gboolean
@@ -107,6 +109,12 @@ static void
 initable_iface_init (GInitableIface *iface)
 {
   iface->init = eos_shard_shard_file_init_internal;
+}
+
+static void
+async_initable_iface_init (GAsyncInitableIface *iface)
+{
+  // Default implementation will run g_initable_init in a thread
 }
 
 static void
