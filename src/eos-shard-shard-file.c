@@ -36,6 +36,10 @@ struct _EosShardShardFile
   GObject parent;
   GVariant *header_variant;
 
+  GList *init_results;
+  GError *init_error;
+  guint init_state;
+
   char *path;
   int fd;
 };
@@ -47,11 +51,20 @@ enum
   LAST_PROP,
 };
 
+enum
+{
+   NOT_INITIALIZED,
+   INITIALIZING,
+   INITIALIZED
+};
+
 static GParamSpec *obj_props[LAST_PROP] = { NULL, };
 
 static void initable_iface_init (GInitableIface *iface);
+static void async_initable_iface_init (GAsyncInitableIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (EosShardShardFile, eos_shard_shard_file, G_TYPE_OBJECT,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_ASYNC_INITABLE, async_initable_iface_init)
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init))
 
 static gboolean
@@ -104,9 +117,99 @@ eos_shard_shard_file_init_internal (GInitable *initable,
 }
 
 static void
+eos_shard_shard_file_init_async_task_fn (GTask        *task,
+                                         gpointer      object,
+                                         gpointer      task_data,
+                                         GCancellable *cancellable)
+{
+  GError *error = NULL;
+
+  if (eos_shard_shard_file_init_internal (G_INITABLE (object), cancellable, &error))
+    g_task_return_boolean (task, TRUE);
+  else
+    g_task_return_error (task, error);
+}
+
+static void
+eos_shard_shard_file_init_async_ready (GObject      *source,
+                                       GAsyncResult *result,
+                                       gpointer      user_data)
+{
+  EosShardShardFile *self = EOS_SHARD_SHARD_FILE (source);
+  GList *l;
+  self->init_state = INITIALIZED;
+  g_task_propagate_boolean (G_TASK (result), &self->init_error);
+
+  for (l = self->init_results; l != NULL; l = l->next)
+    {
+      GTask *task = l->data;
+
+      if (self->init_error)
+        g_task_return_error (task, g_error_copy (self->init_error));
+      else
+        g_task_return_boolean (task, TRUE);
+      g_object_unref (task);
+    }
+  g_list_free (self->init_results);
+  self->init_results = NULL;
+}
+
+static void
+eos_shard_shard_file_init_async_internal (GAsyncInitable      *initable,
+                                          int                 io_priority,
+                                          GCancellable       *cancellable,
+                                          GAsyncReadyCallback callback,
+                                          gpointer            user_data)
+{
+  EosShardShardFile *self = EOS_SHARD_SHARD_FILE (initable);
+  GTask *task = g_task_new (initable, cancellable, callback, user_data);
+  GTask *init_task;
+
+  switch (self->init_state)
+    {
+      case NOT_INITIALIZED:
+        self->init_results = g_list_append (self->init_results,
+                                            task);
+        self->init_state = INITIALIZING;
+        init_task = g_task_new (initable, cancellable, eos_shard_shard_file_init_async_ready, NULL);
+        g_task_run_in_thread (init_task, eos_shard_shard_file_init_async_task_fn);
+        g_object_unref (init_task);
+        break;
+      case INITIALIZING:
+        self->init_results = g_list_append (self->init_results,
+                                            task);
+        break;
+      case INITIALIZED:
+        if (self->init_error)
+          g_task_return_error (task, g_error_copy (self->init_error));
+        else
+          g_task_return_boolean (task, TRUE);
+        g_object_unref (task);
+        break;
+    }
+}
+
+static gboolean
+eos_shard_shard_file_init_finish_internal (GAsyncInitable       *initable,
+                                           GAsyncResult         *result,
+                                           GError              **error)
+{
+  g_return_val_if_fail (g_task_is_valid (result, initable), FALSE);
+
+  return g_task_propagate_boolean (G_TASK (result), error);
+}
+
+static void
 initable_iface_init (GInitableIface *iface)
 {
   iface->init = eos_shard_shard_file_init_internal;
+}
+
+static void
+async_initable_iface_init (GAsyncInitableIface *iface)
+{
+  iface->init_async = eos_shard_shard_file_init_async_internal;
+  iface->init_finish = eos_shard_shard_file_init_finish_internal;
 }
 
 static void
@@ -153,6 +256,8 @@ eos_shard_shard_file_finalize (GObject *object)
   close (self->fd);
   g_clear_pointer (&self->path, g_free);
   g_clear_pointer (&self->header_variant, g_variant_unref);
+  g_clear_error (&self->init_error);
+  g_list_free_full (self->init_results, g_object_unref);
 
   G_OBJECT_CLASS (eos_shard_shard_file_parent_class)->finalize (object);
 }
