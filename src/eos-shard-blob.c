@@ -106,7 +106,7 @@ _eos_shard_blob_get_packed_size (EosShardBlob *blob)
 }
 
 goffset
-_eos_shard_blob_get_offset (EosShardBlob *blob)
+eos_shard_blob_get_offset (EosShardBlob *blob)
 {
   return blob->offs;
 }
