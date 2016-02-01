@@ -17,13 +17,11 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_TYPES_H
-#define EOS_SHARD_TYPES_H
+#include "eos-shard-shard-file-impl.h"
 
-typedef struct _EosShardShardFile EosShardShardFile;
-typedef struct _EosShardShardFileImpl EosShardShardFileImpl;
-typedef struct _EosShardRecord EosShardRecord;
-typedef struct _EosShardBlob EosShardBlob;
-typedef struct _EosShardBlobStream EosShardBlobStream;
+G_DEFINE_INTERFACE (EosShardShardFileImpl, eos_shard_shard_file_impl, G_TYPE_OBJECT);
 
-#endif /* EOS_SHARD_TYPES_H */
+static void
+eos_shard_shard_file_impl_default_init (EosShardShardFileImplInterface *iface)
+{
+}
