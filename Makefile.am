@@ -29,6 +29,7 @@ eos_shard_headers = \
 	src/eos-shard-shard-file.h \
 	src/eos-shard-shard-file-impl.h \
 	src/eos-shard-shard-file-impl-v1.h \
+	src/eos-shard-shard-file-impl-v2.h \
 	src/eos-shard-record.h \
 	src/eos-shard-blob.h \
 	src/eos-shard-blob-stream.h \
@@ -42,6 +43,7 @@ eos_shard_sources = \
 	src/eos-shard-shard-file.c \
 	src/eos-shard-shard-file-impl.c \
 	src/eos-shard-shard-file-impl-v1.c \
+	src/eos-shard-shard-file-impl-v2.c \
 	src/eos-shard-record.c \
 	src/eos-shard-blob.c \
 	src/eos-shard-blob-stream.c \
