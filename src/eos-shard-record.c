@@ -86,5 +86,19 @@ eos_shard_record_get_hex_name (EosShardRecord *record)
   return hex_name;
 }
 
+/**
+ * eos_shard_record_lookup_blob:
+ * @record: An #EosShardRecord
+ * @name: The name to look up the blob by.
+ *
+ * Returns: (transfer full): the blob
+ */
+EosShardBlob *
+eos_shard_record_lookup_blob (EosShardRecord *record,
+                              const char     *name)
+{
+  return _eos_shard_shard_file_lookup_blob (record->shard_file, record, name);
+}
+
 G_DEFINE_BOXED_TYPE (EosShardRecord, eos_shard_record,
                      eos_shard_record_ref, eos_shard_record_unref)
