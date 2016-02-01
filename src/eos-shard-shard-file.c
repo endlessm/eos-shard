@@ -36,6 +36,9 @@
 #include "eos-shard-format-v1.h"
 #include "eos-shard-shard-file-impl-v1.h"
 
+#include "eos-shard-format-v2.h"
+#include "eos-shard-shard-file-impl-v2.h"
+
 struct _EosShardShardFile
 {
   GObject parent;
@@ -85,6 +88,9 @@ detect_version (EosShardShardFile *self,
    * file, so we have to strstr for it. */
   if (memmem (buf, sizeof (buf), EOS_SHARD_V1_MAGIC, strlen (EOS_SHARD_V1_MAGIC)))
     return _eos_shard_shard_file_impl_v1_new (self, self->fd, error);
+
+  if (memcmp (buf, EOS_SHARD_V2_MAGIC, strlen (EOS_SHARD_V2_MAGIC)) == 0)
+    return _eos_shard_shard_file_impl_v2_new (self, self->fd, error);
 
   g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
                "Could not detect shard file version.");
