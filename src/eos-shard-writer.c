@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "eos-shard-shard-file.h"
+#include "eos-shard-format-v1.h"
 
 #define ALIGN(n) (((n) + 0x3f) & ~0x3f)
 
@@ -218,7 +219,7 @@ blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 static GVariant *
 record_entry_variant (struct eos_shard_writer_record_entry *entry)
 {
-  return g_variant_new ("(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+  return g_variant_new ("(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
                         g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), entry->raw_name,
                                                    sizeof (entry->raw_name), sizeof (*entry->raw_name)),
                         blob_entry_variant (&entry->metadata),
@@ -230,16 +231,16 @@ header_entry_variant (GArray *entries)
 {
   GVariantBuilder builder;
 
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a" EOS_SHARD_RECORD_ENTRY));
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a" EOS_SHARD_V1_RECORD_ENTRY));
 
   int i;
   for (i = 0; i < entries->len; i++) {
     struct eos_shard_writer_record_entry *e = &g_array_index (entries, struct eos_shard_writer_record_entry, i);
-    g_variant_builder_add (&builder, "@" EOS_SHARD_RECORD_ENTRY, record_entry_variant (e));
+    g_variant_builder_add (&builder, "@" EOS_SHARD_V1_RECORD_ENTRY, record_entry_variant (e));
   }
 
-  return g_variant_new (EOS_SHARD_HEADER_ENTRY,
-                        EOS_SHARD_MAGIC,
+  return g_variant_new (EOS_SHARD_V1_HEADER_ENTRY,
+                        EOS_SHARD_V1_MAGIC,
                         &builder);
 }
 

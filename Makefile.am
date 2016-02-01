@@ -32,7 +32,7 @@ eos_shard_headers = \
 	src/eos-shard-blob-stream.h \
 	src/eos-shard-writer.h \
 	src/eos-shard-enums.h \
-	src/eos-shard-format.h \
+	src/eos-shard-format-v1.h \
 	src/eos-shard-types.h \
 	$(NULL)
 

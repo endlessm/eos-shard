@@ -23,7 +23,7 @@
 
 #include "eos-shard-shard-file.h"
 #include "eos-shard-blob.h"
-#include "eos-shard-format.h"
+#include "eos-shard-format-v1.h"
 
 static EosShardRecord *
 eos_shard_record_new (void)
@@ -98,7 +98,7 @@ _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *reco
   const void *raw_name;
 
   record->shard_file = g_object_ref (shard_file);
-  g_variant_get (record_variant, "(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+  g_variant_get (record_variant, "(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
                  &raw_name_variant,
                  &metadata_variant,
                  &data_variant);

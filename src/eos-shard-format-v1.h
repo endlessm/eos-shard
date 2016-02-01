@@ -17,32 +17,23 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_FORMAT_H
-#define EOS_SHARD_FORMAT_H
+#ifndef EOS_SHARD_FORMAT_V1_H
+#define EOS_SHARD_FORMAT_V1_H
 
 #include <stdint.h>
 
 /* The base file format consists of a uint64_t, which defines
  * the header's length. After that comes an EOS_SHARD_HEADER_ENTRY. */
 
-typedef enum
-{
-  EOS_SHARD_BLOB_FLAG_NONE,
-  EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB,
-} EosShardBlobFlags;
-
-#define EOS_SHARD_MAGIC ("ShardV1")
+#define EOS_SHARD_V1_MAGIC ("ShardV1")
 
 /* content-type, sha256 checksum, flags, offset, size, uncompressed-size */
-#define EOS_SHARD_BLOB_ENTRY "(sayuttt)"
+#define EOS_SHARD_V1_BLOB_ENTRY "(sayuttt)"
 
 /* raw name, metadata blob, data blob */
-#define EOS_SHARD_RECORD_ENTRY "(ay" EOS_SHARD_BLOB_ENTRY EOS_SHARD_BLOB_ENTRY ")"
+#define EOS_SHARD_V1_RECORD_ENTRY "(ay" EOS_SHARD_V1_BLOB_ENTRY EOS_SHARD_V1_BLOB_ENTRY ")"
 
 /* magic, array of records */
-#define EOS_SHARD_HEADER_ENTRY "(sa" EOS_SHARD_RECORD_ENTRY ")"
+#define EOS_SHARD_V1_HEADER_ENTRY "(sa" EOS_SHARD_V1_RECORD_ENTRY ")"
 
-#define EOS_SHARD_RAW_NAME_SIZE 20
-#define EOS_SHARD_HEX_NAME_SIZE (EOS_SHARD_RAW_NAME_SIZE*2)
-
-#endif /* EOS_SHARD_FORMAT_H */
+#endif /* EOS_SHARD_FORMAT_V1_H */
