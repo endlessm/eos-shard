@@ -241,9 +241,16 @@ list_records (EosShardShardFileImpl *impl)
   return g_slist_reverse (l);
 }
 
+static EosShardBlob *
+lookup_blob (EosShardShardFileImpl *impl, EosShardRecord *record, const char *name)
+{
+  return NULL;
+}
+
 static void
 shard_file_impl_init (EosShardShardFileImplInterface *iface)
 {
   iface->find_record_by_raw_name = find_record_by_raw_name;
   iface->list_records = list_records;
+  iface->lookup_blob = lookup_blob;
 }
