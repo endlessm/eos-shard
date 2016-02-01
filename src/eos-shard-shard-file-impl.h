@@ -17,12 +17,25 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef EOS_SHARD_SHARD_FILE_IMPL_H
+#define EOS_SHARD_SHARD_FILE_IMPL_H
 
-typedef struct _EosShardShardFile EosShardShardFile;
-typedef struct _EosShardShardFileImpl EosShardShardFileImpl;
-typedef struct _EosShardRecord EosShardRecord;
-typedef struct _EosShardBlob EosShardBlob;
-typedef struct _EosShardBlobStream EosShardBlobStream;
-typedef struct _EosShardDictionary EosShardDictionary;
-typedef struct _EosShardDictionaryWriter EosShardDictionaryWriter;
+#include <gio/gio.h>
+#include <stdint.h>
+
+#include "eos-shard-types.h"
+
+#define EOS_SHARD_TYPE_SHARD_FILE_IMPL (eos_shard_shard_file_impl_get_type ())
+G_DECLARE_INTERFACE (EosShardShardFileImpl, eos_shard_shard_file_impl, EOS_SHARD, SHARD_FILE_IMPL, GObject)
+
+struct _EosShardShardFileImplInterface
+{
+  GTypeInterface g_iface;
+
+  EosShardRecord *  (* find_record_by_raw_name) (EosShardShardFileImpl  *self,
+                                                 uint8_t                *raw_name);
+
+  GSList *          (* list_records)            (EosShardShardFileImpl  *self);
+};
+
+#endif /* EOS_SHARD_SHARD_FILE_IMPL_H */
