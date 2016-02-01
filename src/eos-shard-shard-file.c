@@ -17,6 +17,9 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+/* for memmem */
+#define _GNU_SOURCE
+
 #include "eos-shard-shard-file.h"
 
 #include <errno.h>
@@ -28,12 +31,15 @@
 #include "eos-shard-enums.h"
 #include "eos-shard-blob.h"
 #include "eos-shard-record.h"
+#include "eos-shard-shard-file-impl.h"
+
 #include "eos-shard-format-v1.h"
+#include "eos-shard-shard-file-impl-v1.h"
 
 struct _EosShardShardFile
 {
   GObject parent;
-  GVariant *header_variant;
+  EosShardShardFileImpl *impl;
 
   GList *init_results;
   GError *init_error;
@@ -66,6 +72,25 @@ G_DEFINE_TYPE_WITH_CODE (EosShardShardFile, eos_shard_shard_file, G_TYPE_OBJECT,
                          G_IMPLEMENT_INTERFACE (G_TYPE_ASYNC_INITABLE, async_initable_iface_init)
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init))
 
+static EosShardShardFileImpl *
+detect_version (EosShardShardFile *self,
+                GError **error)
+{
+  /* Magic should be within the first 16 chars. */
+  char buf[16] = { 0 };
+
+  pread (self->fd, buf, sizeof (buf), 0);
+
+  /* Since we wrap a GVariant, the magic isn't at the start of the
+   * file, so we have to strstr for it. */
+  if (memmem (buf, sizeof (buf), EOS_SHARD_V1_MAGIC, strlen (EOS_SHARD_V1_MAGIC)))
+    return _eos_shard_shard_file_impl_v1_new (self, self->fd, error);
+
+  g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
+               "Could not detect shard file version.");
+  return NULL;
+}
+
 static gboolean
 eos_shard_shard_file_init_internal (GInitable *initable,
                                     GCancellable *cancellable,
@@ -91,24 +116,9 @@ eos_shard_shard_file_init_internal (GInitable *initable,
     return FALSE;
   }
 
-  uint64_t header_size;
-  g_assert (read (self->fd, &header_size, sizeof (header_size)) >= 0);
-  header_size = GUINT64_FROM_LE (header_size);
-
-  uint8_t *header_data = g_malloc (header_size);
-  g_assert (read (self->fd, header_data, header_size) >= 0);
-
-  g_autoptr(GBytes) bytes = g_bytes_new_take (header_data, header_size);
-  self->header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_V1_HEADER_ENTRY), bytes, FALSE);
-
-  const char *magic;
-  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_V1_RECORD_ENTRY ")",
-                 &magic, NULL);
-
-  if (strcmp (magic, EOS_SHARD_V1_MAGIC) != 0) {
+  self->impl = detect_version (self, error);
+  if (self->impl == NULL) {
     close (self->fd);
-    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
-                 "The shard file at %s is corrupt.", self->path);
     return FALSE;
   }
 
@@ -253,8 +263,8 @@ eos_shard_shard_file_finalize (GObject *object)
   EosShardShardFile *self = EOS_SHARD_SHARD_FILE (object);
 
   close (self->fd);
+  g_clear_object (&self->impl);
   g_clear_pointer (&self->path, g_free);
-  g_clear_pointer (&self->header_variant, g_variant_unref);
   g_clear_error (&self->init_error);
   g_list_free_full (self->init_results, g_object_unref);
 
@@ -333,92 +343,6 @@ eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *hex_name)
   return TRUE;
 }
 
-typedef struct {
-  GVariant *records;
-  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
-} FindRecordByNameKey;
-
-static EosShardBlob *
-blob_new_for_variant (EosShardShardFile           *shard_file,
-                      GVariant                    *blob_variant)
-{
-  EosShardBlob *blob = _eos_shard_blob_new ();
-  g_autoptr(GVariant) checksum_variant;
-  size_t n_elts;
-  const void *checksum;
-
-  blob->shard_file = g_object_ref (shard_file);
-  char *content_type;
-  g_variant_get (blob_variant, "(&s@ayuttt)",
-                 &content_type,
-                 &checksum_variant,
-                 &blob->flags,
-                 &blob->offs,
-                 &blob->size,
-                 &blob->uncompressed_size);
-  checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
-  if (n_elts != 32)
-    return NULL;
-  blob->checksum = checksum;
-  return blob;
-}
-
-static EosShardRecord *
-record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
-{
-  EosShardRecord *record = _eos_shard_record_new ();
-  g_autoptr(GVariant) raw_name_variant;
-  g_autoptr(GVariant) metadata_variant;
-  g_autoptr(GVariant) data_variant;
-  size_t n_elts;
-  const void *raw_name;
-
-  record->shard_file = g_object_ref (shard_file);
-  g_variant_get (record_variant, "(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
-                 &raw_name_variant,
-                 &metadata_variant,
-                 &data_variant);
-  raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
-  if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
-    goto corrupt;
-
-  record->raw_name = raw_name;
-  record->metadata = blob_new_for_variant (shard_file, metadata_variant);
-  if (!record->metadata)
-    goto corrupt;
-
-  record->data = blob_new_for_variant (shard_file, data_variant);
-  if (!record->data)
-    goto corrupt;
-
-  return record;
-
- corrupt:
-  eos_shard_record_unref (record);
-  return NULL;
-}
-
-static int
-find_record_by_raw_name_compar (const void *key_, const void *item)
-{
-  const FindRecordByNameKey *key = key_;
-  unsigned index = GPOINTER_TO_UINT (item) - 1;
-  g_autoptr(GVariant) raw_name_variant;
-  size_t n_elts;
-  const uint8_t *raw_name;
-
-  g_variant_get_child (key->records, index,
-                       "(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
-                       &raw_name_variant, NULL, NULL);
-  raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
-
-  /* If we have a corrupt shard, make the lookup return NULL. */
-  if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
-    return -1;
-
-  return memcmp (key->raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE);
-}
-
 /**
  * eos_shard_shard_file_find_record_by_raw_name:
  *
@@ -429,29 +353,8 @@ find_record_by_raw_name_compar (const void *key_, const void *item)
 EosShardRecord *
 eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *raw_name)
 {
-  FindRecordByNameKey key;
-  void *res;
-
-  memcpy (key.raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE);
-  g_variant_get (self->header_variant, "(&s@a" EOS_SHARD_V1_RECORD_ENTRY ")",
-                 NULL, &key.records);
-
-  /* This is a bit disgusting, but we're basically using dummy pointers to bsearch
-   * through the GVariant's children. The "pointer" is actually just a 1-based index
-   * of the child. We use 1-based indexes since NULL represents "no match", so we
-   * need to distinguish the first child from no match.
-   */
-  res = bsearch (&key,
-                 GUINT_TO_POINTER (1), g_variant_n_children (key.records), 1,
-                 find_record_by_raw_name_compar);
-
-  if (res == NULL)
-    return NULL;
-
-  int idx = GPOINTER_TO_UINT (res) - 1;
-  g_autoptr(GVariant) child = g_variant_get_child_value (key.records, idx);
-  g_variant_unref (key.records);
-  return record_new_for_variant (self, child);
+  EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
+  return iface->find_record_by_raw_name (self->impl, raw_name);
 }
 
 /**
@@ -482,23 +385,15 @@ eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, char *hex
 GSList *
 eos_shard_shard_file_list_records (EosShardShardFile *self)
 {
-  GSList *l = NULL;
+  EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
+  return iface->list_records (self->impl);
+}
 
-  g_autoptr(GVariantIter) records_iter;
-  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_V1_RECORD_ENTRY ")",
-                 NULL, &records_iter);
-
-  GVariant *child;
-  while ((child = g_variant_iter_next_value (records_iter))) {
-    EosShardRecord *record = record_new_for_variant (self, child);
-    if (!record)
-      return NULL;
-
-    l = g_slist_prepend (l, record);
-    g_variant_unref (child);
-  }
-
-  return g_slist_reverse (l);
+gsize
+_eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset)
+{
+  EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
+  return iface->read_data (self->impl, buf, count, offset);
 }
 
 GBytes *
@@ -547,10 +442,4 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   }
 
   return bytes;
-}
-
-gsize
-_eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset)
-{
-  return pread (self->fd, buf, count, offset);
 }
