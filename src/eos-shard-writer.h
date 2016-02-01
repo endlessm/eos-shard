@@ -20,7 +20,7 @@
 #pragma once
 
 #include <gio/gio.h>
-#include "eos-shard-format.h"
+#include "eos-shard-blob.h"
 
 /**
  * EosShardWriter:

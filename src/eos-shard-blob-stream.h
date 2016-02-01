@@ -22,7 +22,6 @@
 #include <gio/gio.h>
 
 #include "eos-shard-types.h"
-#include "eos-shard-format.h"
 
 /**
  * EosShardBlobStream:

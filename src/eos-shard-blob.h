@@ -24,7 +24,12 @@
 
 #include "eos-shard-types.h"
 #include "eos-shard-blob-stream.h"
-#include "eos-shard-format.h"
+
+typedef enum
+{
+  EOS_SHARD_BLOB_FLAG_NONE,
+  EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB,
+} EosShardBlobFlags;
 
 /**
  * EosShardBlob:

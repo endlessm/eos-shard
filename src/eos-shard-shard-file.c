@@ -26,10 +26,10 @@
 #include <string.h>
 
 #include "eos-shard-enums.h"
-#include "eos-shard-format.h"
 #include "eos-shard-blob.h"
 #include "eos-shard-record.h"
 #include "eos-shard-dictionary.h"
+#include "eos-shard-format-v1.h"
 
 struct _EosShardShardFile
 {
@@ -100,13 +100,13 @@ eos_shard_shard_file_init_internal (GInitable *initable,
   g_assert (read (self->fd, header_data, header_size) >= 0);
 
   g_autoptr(GBytes) bytes = g_bytes_new_take (header_data, header_size);
-  self->header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_HEADER_ENTRY), bytes, FALSE);
+  self->header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_V1_HEADER_ENTRY), bytes, FALSE);
 
   const char *magic;
-  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_RECORD_ENTRY ")",
+  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_V1_RECORD_ENTRY ")",
                  &magic, NULL);
 
-  if (strcmp (magic, EOS_SHARD_MAGIC) != 0) {
+  if (strcmp (magic, EOS_SHARD_V1_MAGIC) != 0) {
     close (self->fd);
     g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_SHARD_FILE_CORRUPT,
                  "The shard file at %s is corrupt.", self->path);
@@ -349,7 +349,7 @@ find_record_by_raw_name_compar (const void *key_, const void *item)
   const uint8_t *raw_name;
 
   g_variant_get_child (key->records, index,
-                       "(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+                       "(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
                        &raw_name_variant, NULL, NULL);
   raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
 
@@ -374,7 +374,7 @@ eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *
   void *res;
 
   memcpy (key.raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE);
-  g_variant_get (self->header_variant, "(&s@a" EOS_SHARD_RECORD_ENTRY ")",
+  g_variant_get (self->header_variant, "(&s@a" EOS_SHARD_V1_RECORD_ENTRY ")",
                  NULL, &key.records);
 
   /* This is a bit disgusting, but we're basically using dummy pointers to bsearch
@@ -426,7 +426,7 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
   GSList *l = NULL;
 
   g_autoptr(GVariantIter) records_iter;
-  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_RECORD_ENTRY ")",
+  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_V1_RECORD_ENTRY ")",
                  NULL, &records_iter);
 
   GVariant *child;
