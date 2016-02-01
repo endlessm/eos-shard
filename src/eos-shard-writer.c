@@ -37,7 +37,6 @@ static off_t lalign(int fd)
 struct eos_shard_writer_blob_entry
 {
   GFile *file;
-  char *content_type;
   uint16_t flags;
   uint8_t checksum[32];
   uint64_t offs;
@@ -73,7 +72,6 @@ static void
 eos_shard_writer_blob_entry_clear (struct eos_shard_writer_blob_entry *blob)
 {
   g_clear_object (&blob->file);
-  g_free (blob->content_type);
 }
 
 static void
@@ -146,7 +144,6 @@ get_blob_entry (struct eos_shard_writer_record_entry *e,
  * @self: an #EosShardWriter
  * @which_blob: Which blob in the record
  * @file: a file of contents to write into the shard
- * @content_type: (nullable): the content-type of the file. Pass %NULL to auto-detect.
  * @flags: flags about how the data should be stored in the file
  *
  * Set the data for a blob entry in the last added record in the file.
@@ -156,7 +153,6 @@ void
 eos_shard_writer_add_blob (EosShardWriter *self,
                            EosShardWriterBlob which_blob,
                            GFile *file,
-                           const char *content_type,
                            EosShardBlobFlags flags)
 {
   struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
@@ -166,9 +162,6 @@ eos_shard_writer_add_blob (EosShardWriter *self,
   b->flags = flags;
 
   g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
-  if (!content_type)
-    content_type = g_file_info_get_content_type (info);
-  b->content_type = g_strdup (content_type);
   b->uncompressed_size = g_file_info_get_size (info);
 }
 
@@ -213,7 +206,7 @@ static GVariant *
 blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 {
   return g_variant_new ("(s@ayuttt)",
-                        blob->content_type,
+                        "", /* Legacy V1 content type */
                         g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), blob->checksum,
                                                    sizeof (blob->checksum), sizeof (*blob->checksum)),
                         blob->flags,

@@ -45,7 +45,6 @@ struct _EosShardBlob {
   int ref_count;
   EosShardShardFile *shard_file;
 
-  const char *content_type;
   EosShardBlobFlags flags;
   const uint8_t *checksum;
   uint64_t offs;
@@ -53,7 +52,6 @@ struct _EosShardBlob {
   uint64_t uncompressed_size;
 };
 
-const char * eos_shard_blob_get_content_type (EosShardBlob *blob);
 GBytes * eos_shard_blob_load_contents (EosShardBlob  *blob,
                                        GError       **error);
 GInputStream * eos_shard_blob_get_stream (EosShardBlob *blob);

@@ -50,19 +50,6 @@ eos_shard_blob_unref (EosShardBlob *blob)
 }
 
 /**
- * eos_shard_blob_get_content_type:
- *
- * Get the content type of the blob's data.
- *
- * Returns: the mimetype of the blob
- */
-const char *
-eos_shard_blob_get_content_type (EosShardBlob *blob)
-{
-  return (const char *) blob->content_type;
-}
-
-/**
  * eos_shard_blob_get_stream:
  *
  * Creates and returns a #GInputStream to the blob's content. If the blob is
@@ -149,8 +136,9 @@ _eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
   const void *checksum;
 
   blob->shard_file = g_object_ref (shard_file);
+  char *content_type;
   g_variant_get (blob_variant, "(&s@ayuttt)",
-                 &blob->content_type,
+                 &content_type,
                  &checksum_variant,
                  &blob->flags,
                  &blob->offs,
