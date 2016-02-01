@@ -44,7 +44,7 @@ struct _EosShardRecord {
   EosShardBlob *metadata;
 };
 
-EosShardRecord * _eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant);
+EosShardRecord * _eos_shard_record_new (void);
 
 uint8_t * eos_shard_record_get_raw_name (EosShardRecord *record);
 char * eos_shard_record_get_hex_name (EosShardRecord *record);

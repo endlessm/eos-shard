@@ -339,6 +339,65 @@ typedef struct {
   uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
 } FindRecordByNameKey;
 
+EosShardBlob *
+blob_new_for_variant (EosShardShardFile           *shard_file,
+                      GVariant                    *blob_variant)
+{
+  EosShardBlob *blob = _eos_shard_blob_new ();
+  g_autoptr(GVariant) checksum_variant;
+  size_t n_elts;
+  const void *checksum;
+
+  blob->shard_file = g_object_ref (shard_file);
+  g_variant_get (blob_variant, "(&s@ayuttt)",
+                 &blob->content_type,
+                 &checksum_variant,
+                 &blob->flags,
+                 &blob->offs,
+                 &blob->size,
+                 &blob->uncompressed_size);
+  checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
+  if (n_elts != 32)
+    return NULL;
+  blob->checksum = checksum;
+  return blob;
+}
+
+static EosShardRecord *
+record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
+{
+  EosShardRecord *record = _eos_shard_record_new ();
+  g_autoptr(GVariant) raw_name_variant;
+  g_autoptr(GVariant) metadata_variant;
+  g_autoptr(GVariant) data_variant;
+  size_t n_elts;
+  const void *raw_name;
+
+  record->shard_file = g_object_ref (shard_file);
+  g_variant_get (record_variant, "(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
+                 &raw_name_variant,
+                 &metadata_variant,
+                 &data_variant);
+  raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
+  if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
+    goto corrupt;
+
+  record->raw_name = raw_name;
+  record->metadata = blob_new_for_variant (shard_file, metadata_variant);
+  if (!record->metadata)
+    goto corrupt;
+
+  record->data = blob_new_for_variant (shard_file, data_variant);
+  if (!record->data)
+    goto corrupt;
+
+  return record;
+
+ corrupt:
+  eos_shard_record_unref (record);
+  return NULL;
+}
+
 static int
 find_record_by_raw_name_compar (const void *key_, const void *item)
 {
@@ -392,7 +451,7 @@ eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *
   int idx = GPOINTER_TO_UINT (res) - 1;
   g_autoptr(GVariant) child = g_variant_get_child_value (key.records, idx);
   g_variant_unref (key.records);
-  return _eos_shard_record_new_for_variant (self, child);
+  return record_new_for_variant (self, child);
 }
 
 /**
@@ -431,7 +490,7 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
 
   GVariant *child;
   while ((child = g_variant_iter_next_value (records_iter))) {
-    EosShardRecord *record = _eos_shard_record_new_for_variant (self, child);
+    EosShardRecord *record = record_new_for_variant (self, child);
     if (!record)
       return NULL;
 

@@ -58,6 +58,9 @@ struct _EosShardBlob {
 };
 
 const char * eos_shard_blob_get_content_type (EosShardBlob *blob);
+
+EosShardBlob * _eos_shard_blob_new (void);
+
 GBytes * eos_shard_blob_load_contents (EosShardBlob  *blob,
                                        GError       **error);
 GInputStream * eos_shard_blob_get_stream (EosShardBlob *blob);
@@ -66,7 +69,6 @@ gsize eos_shard_blob_get_content_size (EosShardBlob *blob);
 EosShardBlob * eos_shard_blob_ref (EosShardBlob *blob);
 void eos_shard_blob_unref (EosShardBlob *blob);
 
-EosShardBlob * _eos_shard_blob_new_for_variant (EosShardShardFile *shard_file, GVariant *blob_variant);
 gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
 goffset eos_shard_blob_get_offset (EosShardBlob *blob);
 

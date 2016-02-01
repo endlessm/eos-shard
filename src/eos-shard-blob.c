@@ -20,8 +20,8 @@
 #include "eos-shard-blob.h"
 #include "eos-shard-shard-file.h"
 
-static EosShardBlob *
-eos_shard_blob_new (void)
+EosShardBlob *
+_eos_shard_blob_new (void)
 {
   EosShardBlob *blob = g_new0 (EosShardBlob, 1);
   blob->ref_count = 1;
@@ -147,30 +147,6 @@ EosShardDictionary *
 eos_shard_blob_load_as_dictionary (EosShardBlob *blob, GError **error)
 {
   return _eos_shard_shard_file_new_dictionary (blob->shard_file, blob, error);
-}
-
-EosShardBlob *
-_eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
-                                 GVariant                    *blob_variant)
-{
-  EosShardBlob *blob = eos_shard_blob_new ();
-  g_autoptr(GVariant) checksum_variant;
-  size_t n_elts;
-  const void *checksum;
-
-  blob->shard_file = g_object_ref (shard_file);
-  g_variant_get (blob_variant, "(&s@ayuttt)",
-                 &blob->content_type,
-                 &checksum_variant,
-                 &blob->flags,
-                 &blob->offs,
-                 &blob->size,
-                 &blob->uncompressed_size);
-  checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
-  if (n_elts != 32)
-    return NULL;
-  blob->checksum = checksum;
-  return blob;
 }
 
 G_DEFINE_BOXED_TYPE (EosShardBlob, eos_shard_blob,
