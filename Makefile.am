@@ -26,13 +26,13 @@ INTROSPECTION_GIRS = EosShard-@SHARD_API_VERSION@.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 eos_shard_headers = \
+	src/eos-shard-format-v1.h \
 	src/eos-shard-shard-file.h \
 	src/eos-shard-record.h \
 	src/eos-shard-blob.h \
 	src/eos-shard-blob-stream.h \
 	src/eos-shard-writer.h \
 	src/eos-shard-enums.h \
-	src/eos-shard-format.h \
 	src/eos-shard-types.h \
 	$(NULL)
 
