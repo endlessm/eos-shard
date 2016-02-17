@@ -259,18 +259,9 @@ write_variant (int fd, GVariant *variant)
                 g_variant_get_size (variant));
 }
 
-/**
- * eos_shard_writer_write:
- * @self: An #EosShardWriter
- * @path: The file path to write the shard to.
- *
- * This finalizes the shard and writes the contents to the file path
- * specified. Meant as the final step in compiling a shard file together.
- */
 void
-eos_shard_writer_write (EosShardWriter *self, char *path)
+eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
 {
-  int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   GVariant *variant;
 
   variant = header_entry_variant (self->entries);
@@ -293,6 +284,20 @@ eos_shard_writer_write (EosShardWriter *self, char *path)
   variant = header_entry_variant (self->entries);
   write_variant (fd, variant);
   g_variant_unref (variant);
+}
 
+/**
+ * eos_shard_writer_write:
+ * @self: An #EosShardWriter
+ * @path: The file path to write the shard to.
+ *
+ * This finalizes the shard and writes the contents to the file path
+ * specified. Meant as the final step in compiling a shard file together.
+ */
+void
+eos_shard_writer_write (EosShardWriter *self, char *path)
+{
+  int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  eos_shard_writer_write_to_fd (self, fd);
   close (fd);
 }

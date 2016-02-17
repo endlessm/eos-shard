@@ -47,6 +47,7 @@ void eos_shard_writer_add_blob (EosShardWriter *self,
                                 GFile *file,
                                 const char *content_type,
                                 EosShardBlobFlags flags);
+void eos_shard_writer_write_to_fd (EosShardWriter *self, int fd);
 void eos_shard_writer_write (EosShardWriter *self, char *path);
 
 #endif /* EOS_SHARD_WRITER_H */
