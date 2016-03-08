@@ -2,6 +2,7 @@ Source: eos-shard
 Priority: standard
 Maintainer: Jasper St. Pierre <jasper@endlessm.com>
 Build-Depends: autotools-dev,
+               dh-autoreconf,
                debhelper (>= 8.0.0),
                gir1.2-glib-2.0,
                gobject-introspection (>= 0.9.7),
