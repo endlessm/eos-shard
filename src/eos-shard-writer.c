@@ -199,7 +199,7 @@ write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
   int size, total_size = 0;
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
   while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
-    write (fd, buf, size);
+    g_assert (write (fd, buf, size) >= 0);
     g_checksum_update (checksum, buf, size);
     total_size += size;
   }
@@ -280,7 +280,7 @@ eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
   }
 
   lseek (fd, 0, SEEK_SET);
-  write (fd, &header_size, sizeof (header_size));
+  g_assert (write (fd, &header_size, sizeof (header_size)) >= 0);
   variant = header_entry_variant (self->entries);
   write_variant (fd, variant);
   g_variant_unref (variant);
