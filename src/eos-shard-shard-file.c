@@ -93,11 +93,11 @@ eos_shard_shard_file_init_internal (GInitable *initable,
   }
 
   uint64_t header_size;
-  read (self->fd, &header_size, sizeof (header_size));
+  g_assert_false (read (self->fd, &header_size, sizeof (header_size)));
   header_size = le64toh (header_size);
 
   uint8_t *header_data = g_malloc (header_size);
-  read (self->fd, header_data, header_size);
+  g_assert_false (read (self->fd, header_data, header_size));
 
   g_autoptr(GBytes) bytes = g_bytes_new_take (header_data, header_size);
   self->header_variant = g_variant_new_from_bytes (G_VARIANT_TYPE (EOS_SHARD_HEADER_ENTRY), bytes, FALSE);
