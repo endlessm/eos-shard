@@ -1,3 +1,9 @@
+eos-shard (1.2) unstable; urgency=medium
+
+  * Update debian rules to facilitate launchpad changes.
+
+ -- Will Greenberg <will@endlessm.com>  Tue, 08 Mar 2016 15:28:56 -0800
+
 eos-shard (1.1) unstable; urgency=low
 
   * Rename to eos-shard
