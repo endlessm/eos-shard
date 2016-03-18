@@ -140,12 +140,19 @@ eos_shard_shard_file_init_async_ready (GObject      *source,
   self->init_state = INITIALIZED;
   g_task_propagate_boolean (G_TASK (result), &self->init_error);
 
+  /* Per documentation, a cancelled g_task_run_in_thread() function will still
+  have run to completion */
+  if (g_error_matches (self->init_error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+    g_clear_error(&self->init_error);
+
   for (l = self->init_results; l != NULL; l = l->next)
     {
       GTask *task = l->data;
 
       if (self->init_error)
         g_task_return_error (task, g_error_copy (self->init_error));
+      else if (g_task_return_error_if_cancelled (task))
+        ;
       else
         g_task_return_boolean (task, TRUE);
       g_object_unref (task);
@@ -182,6 +189,8 @@ eos_shard_shard_file_init_async_internal (GAsyncInitable      *initable,
       case INITIALIZED:
         if (self->init_error)
           g_task_return_error (task, g_error_copy (self->init_error));
+        else if (g_task_return_error_if_cancelled (task))
+          ;
         else
           g_task_return_boolean (task, TRUE);
         g_object_unref (task);

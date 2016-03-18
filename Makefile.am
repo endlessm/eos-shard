@@ -101,6 +101,7 @@ JS_LOG_DRIVER_FLAGS = --comments
 
 TESTS = \
 	test/writerSpec.js \
+	test/shardFileSpec.js \
 	test/streamSpec.js \
 	run_coverage.coverage \
 	$(NULL)
