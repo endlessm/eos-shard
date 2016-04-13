@@ -463,7 +463,7 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   g_checksum_get_digest (checksum, checksum_buf, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (checksum_buf));
 
-  if (memcmp (checksum_buf, blob->checksum, sizeof (checksum_buf) != 0)) {
+  if (memcmp (checksum_buf, blob->checksum, sizeof (checksum_buf)) != 0) {
     g_clear_pointer (&bytes, g_bytes_unref);
     g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_CHECKSUM_MISMATCH,
                  "Could not load blob: checksum did not match");
