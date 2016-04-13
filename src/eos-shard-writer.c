@@ -19,7 +19,6 @@
 
 #include "eos-shard-writer.h"
 
-#include <endian.h>
 #include <fcntl.h>
 #include <string.h>
 
@@ -266,7 +265,7 @@ eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
 
   variant = header_entry_variant (self->entries);
   uint64_t header_size = g_variant_get_size (variant);
-  header_size = htole64 (header_size);
+  header_size = GUINT64_TO_LE (header_size);
   g_variant_unref (variant);
 
   lseek (fd, ALIGN (sizeof (header_size) + header_size), SEEK_SET);

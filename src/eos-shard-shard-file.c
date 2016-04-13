@@ -20,7 +20,6 @@
 #include "eos-shard-shard-file.h"
 
 #include <errno.h>
-#include <endian.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -94,7 +93,7 @@ eos_shard_shard_file_init_internal (GInitable *initable,
 
   uint64_t header_size;
   g_assert (read (self->fd, &header_size, sizeof (header_size)) >= 0);
-  header_size = le64toh (header_size);
+  header_size = GUINT64_FROM_LE (header_size);
 
   uint8_t *header_data = g_malloc (header_size);
   g_assert (read (self->fd, header_data, header_size) >= 0);
