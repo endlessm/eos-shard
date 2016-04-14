@@ -18,4 +18,5 @@
 ## License along with eos-shard.  If not, see
 ## <http://www.gnu.org/licenses/>.
 
-. gnome-autogen.sh
+autoreconf -if || exit $?
+test -n $NOCONFIGURE && ./configure $@

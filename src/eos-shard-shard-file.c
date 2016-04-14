@@ -20,7 +20,6 @@
 #include "eos-shard-shard-file.h"
 
 #include <errno.h>
-#include <endian.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -94,7 +93,7 @@ eos_shard_shard_file_init_internal (GInitable *initable,
 
   uint64_t header_size;
   g_assert (read (self->fd, &header_size, sizeof (header_size)) >= 0);
-  header_size = le64toh (header_size);
+  header_size = GUINT64_FROM_LE (header_size);
 
   uint8_t *header_data = g_malloc (header_size);
   g_assert (read (self->fd, header_data, header_size) >= 0);
@@ -464,7 +463,7 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   g_checksum_get_digest (checksum, checksum_buf, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (checksum_buf));
 
-  if (memcmp (checksum_buf, blob->checksum, sizeof (checksum_buf) != 0)) {
+  if (memcmp (checksum_buf, blob->checksum, sizeof (checksum_buf)) != 0) {
     g_clear_pointer (&bytes, g_bytes_unref);
     g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOB_CHECKSUM_MISMATCH,
                  "Could not load blob: checksum did not match");
