@@ -143,10 +143,18 @@ describe('Basic Shard Writing', function () {
             expect(record_names).toEqual(['7d97e98f8af710c7e7fe703abc8f639e0ee507c4',
                                           'f572d396fae9206628714fb2ce00f72e94f2258f']);
         });
+
+        it('returns null for non-existent records', function() {
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            let record = shard_file.find_record_by_hex_name('885a207638aa331a8aefe97baa9dd08b12219b3c');
+            expect(record).toBe(null);
+        });
     });
 
-    describe('NULL errors', function() {
-        it('handles NULLs in filenames correctly', function() {
+    describe('NUL errors', function() {
+        it('handles NULs in filenames correctly', function() {
             let shard_writer = new EosShard.Writer();
             // The record here has '00's which will translate to NULL bytes.
             shard_writer.add_record('f500000000e9206628714fb2ce00f72e94f2258f');
