@@ -125,7 +125,7 @@ blob_new_for_variant (EosShardShardFile           *shard_file,
   checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
   if (n_elts != 32)
     return NULL;
-  blob->checksum = checksum;
+  memcpy (blob->checksum, checksum, sizeof (blob->checksum));
   return blob;
 }
 
