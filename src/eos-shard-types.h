@@ -24,6 +24,9 @@ typedef struct _EosShardShardFile EosShardShardFile;
 typedef struct _EosShardRecord EosShardRecord;
 typedef struct _EosShardBlob EosShardBlob;
 typedef struct _EosShardBlobStream EosShardBlobStream;
+typedef struct _EosShardBloomFilter EosShardBloomFilter;
 typedef struct _EosShardJList EosShardJList;
+typedef struct _EosShardJListWriter EosShardJListWriter;
+typedef struct _EosShardAliasTable EosShardAliasTable;
 
 #endif /* EOS_SHARD_TYPES_H */

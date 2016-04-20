@@ -56,10 +56,10 @@ struct jlist_block_table_entry {
 };
 
 struct jlist_block_table {
-    uint16_t blocks_length;
+    uint16_t n_blocks;
 
     /* Immediately afterwards, block entries. */
-    struct jlist_block_table_entry blocks[0];
+    struct jlist_block_table_entry *blocks;
 };
 
 #pragma pack(pop)

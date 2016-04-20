@@ -20,14 +20,25 @@
 #pragma once
 
 #include <gio/gio.h>
+#include <string.h>
+#include <math.h>
 
 #include "eos-shard-types.h"
+#include "eos-shard-jlist-format.h"
 
-GType eos_shard_jlist_get_type (void) G_GNUC_CONST;
+struct _EosShardJListWriter {
+  int ref_count;
+  GFileOutputStream *stream;
+  uint32_t *offsets;
+  uint32_t offsets_i;
+  uint32_t block_size;
+  uint32_t entries_added;
+};
 
-EosShardJList * eos_shard_jlist_new_for_fd (int fd, off_t offset);
+GType eos_shard_jlist_writer_get_type (void) G_GNUC_CONST;
 
-EosShardJList * eos_shard_jlist_ref (EosShardJList *jlist);
-void eos_shard_jlist_unref (EosShardJList *jlist);
-char * eos_shard_jlist_lookup_key (EosShardJList *jlist, char *key);
-GHashTable * eos_shard_jlist_values (EosShardJList *jlist);
+EosShardJListWriter * eos_shard_jlist_writer_new_for_stream (GFileOutputStream *stream, int n_entries);
+
+void eos_shard_jlist_writer_begin (EosShardJListWriter *self);
+void eos_shard_jlist_writer_add_entry (EosShardJListWriter *self, char *key, char *value);
+void eos_shard_jlist_writer_finish (EosShardJListWriter *self);

@@ -42,11 +42,19 @@ typedef enum {
 
 void eos_shard_writer_add_record (EosShardWriter *self,
                                   char *hex_name);
+int eos_shard_writer_insert_record (EosShardWriter *self,
+                                  char *hex_name);
 void eos_shard_writer_add_blob (EosShardWriter *self,
                                 EosShardWriterBlob which_blob,
                                 GFile *file,
                                 const char *content_type,
                                 EosShardBlobFlags flags);
+void eos_shard_writer_insert_blob (EosShardWriter *self,
+                                EosShardWriterBlob which_blob,
+                                GFile *file,
+                                const char *content_type,
+                                EosShardBlobFlags flags,
+                                int index);
 void eos_shard_writer_write_to_fd (EosShardWriter *self, int fd);
 void eos_shard_writer_write (EosShardWriter *self, char *path);
 
