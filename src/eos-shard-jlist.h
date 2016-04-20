@@ -1,4 +1,4 @@
-/* Copyright 2015 Endless Mobile, Inc. */
+/* Copyright 2016 Endless Mobile, Inc. */
 
 /* This file is part of eos-shard.
  *
@@ -19,9 +19,14 @@
 
 #pragma once
 
-typedef struct _EosShardShardFile EosShardShardFile;
-typedef struct _EosShardRecord EosShardRecord;
-typedef struct _EosShardBlob EosShardBlob;
-typedef struct _EosShardBlobStream EosShardBlobStream;
-typedef struct _EosShardJList EosShardJList;
-typedef struct _EosShardJListWriter EosShardJListWriter;
+#include <gio/gio.h>
+
+#include "eos-shard-types.h"
+
+GType eos_shard_jlist_get_type (void) G_GNUC_CONST;
+
+EosShardJList * eos_shard_jlist_new_for_fd (int fd, off_t offset);
+
+EosShardJList * eos_shard_jlist_ref (EosShardJList *jlist);
+void eos_shard_jlist_unref (EosShardJList *jlist);
+char * eos_shard_jlist_lookup_key (EosShardJList *jlist, char *key);
