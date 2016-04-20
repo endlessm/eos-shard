@@ -1,4 +1,4 @@
-/* Copyright 2015 Endless Mobile, Inc. */
+/* Copyright 2016 Endless Mobile, Inc. */
 
 /* This file is part of eos-shard.
  *
@@ -17,14 +17,16 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_TYPES_H
-#define EOS_SHARD_TYPES_H
+#pragma once
 
-typedef struct _EosShardShardFile EosShardShardFile;
-typedef struct _EosShardRecord EosShardRecord;
-typedef struct _EosShardBlob EosShardBlob;
-typedef struct _EosShardBlobStream EosShardBlobStream;
-typedef struct _EosShardJList EosShardJList;
-typedef struct _EosShardJListWriter EosShardJListWriter;
+#include <gio/gio.h>
 
-#endif /* EOS_SHARD_TYPES_H */
+#include "eos-shard-types.h"
+
+GType eos_shard_jlist_writer_get_type (void) G_GNUC_CONST;
+
+EosShardJListWriter * eos_shard_jlist_writer_new_for_stream (GFileOutputStream *stream, int n_entries);
+
+void eos_shard_jlist_writer_begin (EosShardJListWriter *self);
+void eos_shard_jlist_writer_add_entry (EosShardJListWriter *self, char *key, char *value);
+void eos_shard_jlist_writer_finish (EosShardJListWriter *self);
