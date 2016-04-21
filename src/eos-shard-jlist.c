@@ -82,7 +82,7 @@ jlist_find_block (EosShardJList *jlist, char *key,
   }
 
   /* We didn't find the item. */
-  if (lo <= 0 || hi >= tbl.blocks_length - 1)
+  if (lo <= 0 || hi > tbl.blocks_length - 1)
     return FALSE;
 
   uint64_t block_idx = lo - 1;
@@ -204,6 +204,8 @@ eos_shard_jlist_lookup_key (EosShardJList *jlist,
                             char          *key)
 {
   uint64_t value_offset = jlist_lookup_key (jlist, key);
+  if (value_offset == 0)
+    return NULL;
   return read_cstring (jlist->fd, jlist->offset + value_offset);
 }
 
