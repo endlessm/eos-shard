@@ -4,7 +4,8 @@
 #define FNV_32_PRIME 16777619
 #define FNV_32_OFFS_BASIS 2166136261LL
 
-uint32_t fnv_mix (uint32_t a) {
+static uint32_t
+fnv_mix (uint32_t a) {
   a += a << 13;
   a ^= a >> 7;
   a += a << 3;
@@ -13,7 +14,7 @@ uint32_t fnv_mix (uint32_t a) {
   return a;
 }
 
-uint32_t
+static uint32_t
 fnv_1a (char *v)
 {
   uint32_t a = FNV_32_OFFS_BASIS;
@@ -24,14 +25,14 @@ fnv_1a (char *v)
   return fnv_mix(a);
 }
 
-uint32_t
+static uint32_t
 fnv_1a_b (uint32_t a)
 {
   return fnv_mix(a * FNV_32_PRIME);
 }
 
-void
-eos_shard_bloom_filter_hash (EosShardBloomFilter *self, char *key) {
+static void
+bloom_filter_hash (EosShardBloomFilter *self, char *key) {
   int i;
   int a = fnv_1a(key);
   int b = fnv_1a_b(a);
@@ -46,7 +47,7 @@ void
 eos_shard_bloom_filter_add (EosShardBloomFilter *self, char *key)
 {
   int i;
-  eos_shard_bloom_filter_hash(self, key);
+  bloom_filter_hash(self, key);
   for (i=0; i < self->n_hashes; i++) {
     int h = self->hashes[i];
     int bucket_i = floor(h / 32);
@@ -59,7 +60,7 @@ gboolean
 eos_shard_bloom_filter_test (EosShardBloomFilter *self, char *key)
 {
   int i;
-  eos_shard_bloom_filter_hash(self, key);
+  bloom_filter_hash(self, key);
   for (i=0; i < self->n_hashes; i++) {
     int h = self->hashes[i];
     int bucket_i = floor(h / 32);
@@ -68,6 +69,60 @@ eos_shard_bloom_filter_test (EosShardBloomFilter *self, char *key)
       return FALSE;
   }
   return TRUE;
+}
+
+/**
+ * eos_shard_bloom_filter_test_with_jlist:
+ * @filter:
+ * @words: (array zero-terminated=0):
+ * @n_words:
+ */
+void
+eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **words, int n_words)
+{
+  int i;
+  int fd = open("out.jlist", O_RDONLY); 
+  double pct_members = 0.1;
+  EosShardJList *jlist = _eos_shard_jlist_new(fd, 0);
+  int kb = filter->n_bits / (8 * 1024);
+  g_print("%d members total, %dKB\n", n_words, kb);
+
+  int false_negatives = 0;
+  g_test_timer_start();
+  for (i=0; i<n_words; i++) {
+    if (eos_shard_bloom_filter_test(filter, words[i])) {
+      char *v = eos_shard_jlist_lookup_key(jlist, words[i]);
+      if (v == NULL) {
+        false_negatives++;
+      }
+      free(v);
+    } else {
+      false_negatives++;
+    }
+  }
+  g_print("all members %fs\n", g_test_timer_elapsed());
+  g_assert(false_negatives == 0);
+
+  int false_positives = 0;
+  g_test_timer_start();
+  for (i=0; i<n_words; i++) {
+    // 1% of our lookups should be real
+    double r=((double)rand()/(double)RAND_MAX);
+    if (r < 1 - pct_members) {
+      words[i][0]++;
+    }
+
+    if (eos_shard_bloom_filter_test(filter, words[i])) {
+      char *v = eos_shard_jlist_lookup_key(jlist, words[i]);
+      if (v == NULL) {
+        false_positives++;
+      }
+      free(v);
+    }
+  }
+  g_print("%.0f pct members %fs\n", pct_members * 100.0, g_test_timer_elapsed());
+
+  g_print("false positive pct %.2f\n", 100.0 * (double)false_positives/(double)n_words);
 }
 
 void
@@ -126,8 +181,6 @@ eos_shard_bloom_filter_new_for_params (int n, double p)
 
   filter->buckets = (uint32_t*)calloc(filter->n_buckets, sizeof(uint32_t));
   filter->hashes = (uint32_t*)calloc(filter->n_hashes, sizeof(uint32_t));
-
-  g_print("actual m: %d actual k: %d\n", filter->n_bits, filter->n_hashes);
 
   return filter;
 }
