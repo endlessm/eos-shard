@@ -139,15 +139,10 @@ jlist_lookup_key (EosShardJList *jlist, char *key)
 {
   struct jlist_block_table_entry block;
 
-  g_test_timer_start();
   if (!jlist_find_block (jlist, key, &block))
     return 0;
-  g_print("bsearch %fs\n", g_test_timer_elapsed());
 
-  g_test_timer_start();
-  uint64_t l = jlist_lookup_key_in_block (jlist, block, key);
-  g_print("linear %fs\n", g_test_timer_elapsed());
-  return l;
+  return jlist_lookup_key_in_block (jlist, block, key);
 }
 
 EosShardJList *
