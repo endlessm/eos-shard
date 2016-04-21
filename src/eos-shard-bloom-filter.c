@@ -52,7 +52,7 @@ eos_shard_bloom_filter_add (EosShardBloomFilter *self, char *key)
     int h = self->hashes[i];
     int bucket_i = floor(h / 32);
     g_assert (bucket_i < self->n_buckets);
-    self->buckets[bucket_i] |= 1 << h;
+    self->buckets[bucket_i] |= 1 << (h % 32);
   }
 }
 
@@ -65,7 +65,7 @@ eos_shard_bloom_filter_test (EosShardBloomFilter *self, char *key)
     int h = self->hashes[i];
     int bucket_i = floor(h / 32);
     g_assert (bucket_i < self->n_buckets);
-    if ((self->buckets[bucket_i] & (1 << h)) == 0)
+    if ((self->buckets[bucket_i] & (1 << (h % 32))) == 0)
       return FALSE;
   }
   return TRUE;
