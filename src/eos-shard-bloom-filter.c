@@ -86,9 +86,8 @@ eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **word
   int fd = open("out.jlist", O_RDONLY); 
   double pct_members = 0.1;
   EosShardJList *jlist = _eos_shard_jlist_new(fd, 0);
-  return jlist;
   int kb = filter->n_bits / (8 * 1024);
-  g_print("%d members total, %dKB\n", n_words, kb);
+  g_print("%d members total, %.2f%% false positive rate, %dKB\n", filter->n_elements, filter->fp_rate, kb);
 
   int false_negatives = 0;
   g_test_timer_start();
@@ -123,9 +122,10 @@ eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **word
       free(v);
     }
   }
-  g_print("%.0f pct members %fs\n", pct_members * 100.0, g_test_timer_elapsed());
 
-  g_print("false positive pct %.2f\n", 100.0 * (double)false_positives/(double)n_words);
+  g_print("%.0f%% members %fs\n", pct_members * 100.0, g_test_timer_elapsed());
+  g_print("measured false positive rate %.2f%%\n", 100.0 * (double)false_positives/(double)n_words);
+  return jlist;
 }
 
 void
@@ -176,6 +176,9 @@ eos_shard_bloom_filter_new_for_params (int n, double p)
 {
   EosShardBloomFilter *filter = g_new0 (EosShardBloomFilter, 1);
   filter->ref_count = 1;
+
+  filter->n_elements = n;
+  filter->fp_rate = p;
 
   int optimal_n_bits = ceil(-1.0 * ((double)n * log(p)) / (M_LN2 * M_LN2));
   filter->n_bits = ((optimal_n_bits / 32) + 1) * 32; // round up to next 32 bit block

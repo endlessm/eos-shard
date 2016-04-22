@@ -202,13 +202,13 @@ read_cstring (int fd, int offset)
 /**
  * eos_shard_jlist_values:
  *
- * Returns: (transfer full): table
+ * Returns: (transfer full) (element-type utf8 utf8): table
  */
 GHashTable *
 eos_shard_jlist_values (EosShardJList *jlist)
 {
   int fd = jlist->fd;
-  GHashTable *table = g_hash_table_new(g_str_hash, g_str_equal);
+  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 
   struct jlist_block_table tbl;
   pread (fd, &tbl, sizeof(tbl), jlist->offset + jlist->hdr.block_table_start);
@@ -232,26 +232,23 @@ eos_shard_jlist_values (EosShardJList *jlist)
         char *chunk_key = str;
         uint64_t key_offs = offs;
 
-  #define ADVANCE_CHUNK()                                                 \
+  #define FOO()                                                 \
         offs += CSTRING_SIZE(str);                                        \
         str += CSTRING_SIZE(str);                                         \
         /* If we're truncated and reached the end of the chunk, then read again. */ \
-        if (str >= chunk + chunk_size) {                                  \
+        if (str >= chunk + chunk_size || offs > end) {                    \
           offs = key_offs;                                                \
           break;                                                          \
         }
 
         /* We've read the key, now advance... */
-        ADVANCE_CHUNK();
+        FOO();
 
         char *value = read_cstring(fd, jlist->offset + offs);
-        (void)chunk_key;
-        (void)value;
-        g_print("%s %s\n", chunk_key, value);
-        //g_hash_table_insert(table, chunk_key, value);
+        g_hash_table_insert(table, g_strdup(chunk_key), value);
 
         /* Skip value. */
-        ADVANCE_CHUNK();
+        FOO();
       }
     }
   }

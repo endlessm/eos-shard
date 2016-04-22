@@ -23,6 +23,8 @@ GType eos_shard_bloom_filter_get_type (void) G_GNUC_CONST;
 struct _EosShardBloomFilter {
   int ref_count;
 
+  double fp_rate;
+  int n_elements;
   int n_bits;
   int n_hashes;
   int n_buckets;
