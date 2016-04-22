@@ -51,9 +51,8 @@ def test(fp_rate):
     b = EosShard.BloomFilter.new_for_params(len(words), fp_rate)
     for i, word in enumerate(words):
         b.add(word)
-    EosShard.BloomFilter.test_with_jlist(b, words, len(words))
+    jlist = EosShard.BloomFilter.test_with_jlist(b, words, len(words))
+    jlist.values()
 
 write_jlist()
 test(0.01)
-test(0.001)
-test(0.0001)

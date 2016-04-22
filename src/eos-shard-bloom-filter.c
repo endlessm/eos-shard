@@ -76,14 +76,17 @@ eos_shard_bloom_filter_test (EosShardBloomFilter *self, char *key)
  * @filter:
  * @words: (array zero-terminated=0):
  * @n_words:
+ *
+ * Returns: (transfer full): table
  */
-void
+EosShardJList *
 eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **words, int n_words)
 {
   int i;
   int fd = open("out.jlist", O_RDONLY); 
   double pct_members = 0.1;
   EosShardJList *jlist = _eos_shard_jlist_new(fd, 0);
+  return jlist;
   int kb = filter->n_bits / (8 * 1024);
   g_print("%d members total, %dKB\n", n_words, kb);
 

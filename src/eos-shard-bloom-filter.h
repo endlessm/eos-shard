@@ -31,7 +31,7 @@ struct _EosShardBloomFilter {
 };
 
 void eos_shard_bloom_filter_testaroo (void);
-void eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **words, int n_words);
+EosShardJList * eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **words, int n_words);
 
 void eos_shard_bloom_filter_add (EosShardBloomFilter *self, char *key);
 gboolean eos_shard_bloom_filter_test (EosShardBloomFilter *self, char *key);

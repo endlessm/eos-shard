@@ -199,6 +199,65 @@ read_cstring (int fd, int offset)
   return g_string_free (string, FALSE);
 }
 
+/**
+ * eos_shard_jlist_values:
+ *
+ * Returns: (transfer full): table
+ */
+GHashTable *
+eos_shard_jlist_values (EosShardJList *jlist)
+{
+  int fd = jlist->fd;
+  GHashTable *table = g_hash_table_new(g_str_hash, g_str_equal);
+
+  struct jlist_block_table tbl;
+  pread (fd, &tbl, sizeof(tbl), jlist->offset + jlist->hdr.block_table_start);
+
+  struct jlist_block_table_entry blocks[tbl.blocks_length];
+  pread (fd, blocks, sizeof(blocks), jlist->offset + jlist->hdr.block_table_start + 2);
+
+  int i;
+  for (i=0; i<tbl.blocks_length; i++) {
+    uint64_t offs = blocks[i].offset, end = offs + blocks[i].length;
+
+    while (offs < end) {
+      /* Now do a linear search for the key... */
+      char chunk[8196] = {};
+      int chunk_size = sizeof (chunk) - 1;
+
+      pread (fd, chunk, chunk_size, jlist->offset + offs);
+
+      char *str = chunk;
+      while (1) {
+        char *chunk_key = str;
+        uint64_t key_offs = offs;
+
+  #define ADVANCE_CHUNK()                                                 \
+        offs += CSTRING_SIZE(str);                                        \
+        str += CSTRING_SIZE(str);                                         \
+        /* If we're truncated and reached the end of the chunk, then read again. */ \
+        if (str >= chunk + chunk_size) {                                  \
+          offs = key_offs;                                                \
+          break;                                                          \
+        }
+
+        /* We've read the key, now advance... */
+        ADVANCE_CHUNK();
+
+        char *value = read_cstring(fd, jlist->offset + offs);
+        (void)chunk_key;
+        (void)value;
+        g_print("%s %s\n", chunk_key, value);
+        //g_hash_table_insert(table, chunk_key, value);
+
+        /* Skip value. */
+        ADVANCE_CHUNK();
+      }
+    }
+  }
+  return table;
+}
+
 char *
 eos_shard_jlist_lookup_key (EosShardJList *jlist,
                             char          *key)
