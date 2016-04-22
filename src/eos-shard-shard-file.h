@@ -25,6 +25,7 @@
 
 #include "eos-shard-types.h"
 #include "eos-shard-format.h"
+#include "eos-shard-jlist.h"
 
 /**
  * EosShardShardFile:

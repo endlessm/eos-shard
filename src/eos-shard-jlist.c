@@ -62,9 +62,9 @@ jlist_find_block (EosShardJList *jlist, char *key,
   pread (fd, blocks, sizeof(blocks), jlist->offset + jlist->hdr.block_table_start + 2);
 
   /* bsearch */
-  uint16_t lo = 0, hi = tbl.blocks_length - 1;
+  int lo = 0, hi = tbl.blocks_length - 1;
   while (lo <= hi) {
-    uint16_t mid = (lo + hi) / 2;
+    int mid = (lo + hi) / 2;
     uint64_t block_offs = blocks[mid].offset;
 
     char chunk_key[key_size];

@@ -333,6 +333,29 @@ eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *hex_name)
   return TRUE;
 }
 
+EosShardJList *
+eos_shard_shard_file_get_jlist (EosShardShardFile *self)
+{
+  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
+
+  // sha1("jlist") == c307a0144b2a9bfc5560eb1f7db921f0ca939e0c
+  if (!eos_shard_util_hex_name_to_raw_name (raw_name, "c307a0144b2a9bfc5560eb1f7db921f0ca939e0c")) {
+    g_print("idk wtf\n");
+    return NULL;
+  }
+
+  EosShardRecord *record = eos_shard_shard_file_find_record_by_raw_name (self, raw_name);
+  if (record == NULL)
+  {
+    g_print("no jlist record found\n");
+    return NULL;
+  }
+  EosShardBlob *data = record->data;
+  uint64_t offs = data->offs;
+
+  return _eos_shard_jlist_new(self->fd, offs);
+}
+
 typedef struct {
   GVariant *records;
   uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
