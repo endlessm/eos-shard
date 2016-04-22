@@ -87,7 +87,13 @@ eos_shard_bloom_filter_test_with_jlist (EosShardBloomFilter *filter, char **word
   double pct_members = 0.1;
   EosShardJList *jlist = _eos_shard_jlist_new(fd, 0);
   int kb = filter->n_bits / (8 * 1024);
-  g_print("%d members total, %.2f%% false positive rate, %dKB\n", filter->n_elements, filter->fp_rate, kb);
+  g_print("%d members total, %.2f%% false positive rate, %dKB\n", filter->n_elements, filter->fp_rate * 100.0, kb);
+
+  g_test_timer_start();
+  for (i=0; i<n_words; i++) {
+    eos_shard_bloom_filter_test(filter, words[i]);
+  }
+  g_print("just bloom filter tests %fs\n", g_test_timer_elapsed());
 
   int false_negatives = 0;
   g_test_timer_start();
