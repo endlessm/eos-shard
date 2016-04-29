@@ -99,23 +99,6 @@ eos_shard_writer_init (EosShardWriter *self)
   g_array_set_clear_func (self->entries, (GDestroyNotify) eos_shard_writer_record_entry_clear);
 }
 
-void
-insert_record (EosShardWriter *self,
-               char *hex_name,
-               int index)
-{
-  struct eos_shard_writer_record_entry record_entry = {};
-
-  eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
-
-  if (index > 0) {
-    struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, index - 1);
-    g_assert (memcmp (record_entry.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
-  }
-
-  g_array_insert_val (self->entries, index, record_entry);
-}
-
 /**
  * eos_shard_writer_add_record:
  * @self: an #EosShardWriter
@@ -132,33 +115,16 @@ void
 eos_shard_writer_add_record (EosShardWriter *self,
                              char *hex_name)
 {
-  insert_record (self, hex_name, self->entries->len - 1);
-}
+  struct eos_shard_writer_record_entry record_entry = {};
 
-/**
- * eos_shard_writer_insert_record:
- * @self: an #EosShardWriter
- * @hex_name: the hexadecimal string which will act as this entry's ID
- *
- * SLOW
- * returns index
- */
-int
-eos_shard_writer_insert_record (EosShardWriter *self,
-                                char *hex_name)
-{
-  int i;
-  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
-  eos_shard_util_hex_name_to_raw_name (raw_name, hex_name);
-  for (i = 0; i < self->entries->len; i++) {
-    struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, i);
-    // Once we've found an entry who's alphabetically past us, stop and insert
-    // our record before it
-    if (memcmp (e->raw_name, raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0)
-      break;
+  eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
+
+  if (self->entries->len > 0) {
+    struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
+    g_assert (memcmp (record_entry.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
   }
-  insert_record(self, hex_name, i);
-  return i;
+
+  g_array_append_val (self->entries, record_entry);
 }
 
 static struct eos_shard_writer_blob_entry *
@@ -193,18 +159,7 @@ eos_shard_writer_add_blob (EosShardWriter *self,
                            const char *content_type,
                            EosShardBlobFlags flags)
 {
-  eos_shard_writer_insert_blob (self, which_blob, file, content_type, flags, self->entries->len - 1);
-}
-
-void
-eos_shard_writer_insert_blob (EosShardWriter *self,
-                              EosShardWriterBlob which_blob,
-                              GFile *file,
-                              const char *content_type,
-                              EosShardBlobFlags flags,
-                              int index)
-{
-  struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, index);
+  struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
   struct eos_shard_writer_blob_entry *b = get_blob_entry (e, which_blob);
 
   b->file = g_object_ref (file);
