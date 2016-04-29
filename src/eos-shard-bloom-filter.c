@@ -22,20 +22,20 @@ fnv_1a (char *v)
   for (c = v; *c; c++) {
     a = (a ^ *c) * FNV_32_PRIME;
   }
-  return fnv_mix(a);
+  return fnv_mix (a);
 }
 
 static uint32_t
 fnv_1a_b (uint32_t a)
 {
-  return fnv_mix(a * FNV_32_PRIME);
+  return fnv_mix (a * FNV_32_PRIME);
 }
 
 static void
 bloom_filter_hash (EosShardBloomFilter *self, char *key) {
   int i;
-  int a = fnv_1a(key);
-  int b = fnv_1a_b(a);
+  int a = fnv_1a (key);
+  int b = fnv_1a_b (a);
   int x = a % self->header.n_bits;
   for (i=0; i < self->header.n_hashes; i++) {
     self->hashes[i] = x < 0 ? (x + self->header.n_bits) : x;
@@ -47,10 +47,10 @@ void
 eos_shard_bloom_filter_add (EosShardBloomFilter *self, char *key)
 {
   int i;
-  bloom_filter_hash(self, key);
+  bloom_filter_hash (self, key);
   for (i=0; i < self->header.n_hashes; i++) {
     int h = self->hashes[i];
-    int bucket_i = floor(h / 32);
+    int bucket_i = floor (h / 32);
     g_assert (bucket_i < self->header.n_buckets);
     self->buckets[bucket_i] |= 1 << (h % 32);
   }
@@ -60,10 +60,10 @@ gboolean
 eos_shard_bloom_filter_test (EosShardBloomFilter *self, char *key)
 {
   int i;
-  bloom_filter_hash(self, key);
+  bloom_filter_hash (self, key);
   for (i=0; i < self->header.n_hashes; i++) {
     int h = self->hashes[i];
-    int bucket_i = floor(h / 32);
+    int bucket_i = floor (h / 32);
     g_assert (bucket_i < self->header.n_buckets);
     if ((self->buckets[bucket_i] & (1 << (h % 32))) == 0)
       return FALSE;
@@ -80,14 +80,13 @@ eos_shard_bloom_filter_new_for_params (int n, double p)
   self->header.n_elements = n;
   self->header.fp_rate = p;
 
-  int optimal_n_bits = ceil(-1.0 * ((double)n * log(p)) / (M_LN2 * M_LN2));
+  int optimal_n_bits = ceil (-1.0 * ((double) n * log (p)) / (M_LN2 * M_LN2));
   self->header.n_bits = ((optimal_n_bits / 32) + 1) * 32; // round up to next 32 bit block
   self->header.n_buckets = self->header.n_bits/32;
-  self->header.n_hashes = ceil(((double)self->header.n_bits/(double)n) * M_LN2);
-  //g_print("bloom from params: %d elem, %d bits, %d hashes, %d buckets, %f fp\n", self->header.n_elements, self->header.n_bits, self->header.n_hashes, self->header.n_buckets, self->header.fp_rate);
+  self->header.n_hashes = ceil (((double) self->header.n_bits/(double) n) * M_LN2);
 
-  self->buckets = (uint32_t*)calloc(self->header.n_buckets, sizeof(uint32_t));
-  self->hashes = (uint32_t*)calloc(self->header.n_hashes, sizeof(uint32_t));
+  self->buckets = (uint32_t*) calloc (self->header.n_buckets, sizeof (uint32_t));
+  self->hashes = (uint32_t*) calloc (self->header.n_hashes, sizeof (uint32_t));
 
   return self;
 }
@@ -95,26 +94,30 @@ eos_shard_bloom_filter_new_for_params (int n, double p)
 void
 eos_shard_bloom_filter_write_to_stream (EosShardBloomFilter *self, GFileOutputStream *stream)
 {
-  //g_print("                   %u\n", self->buckets[0]);
-  g_output_stream_write ((GOutputStream*)stream, &(self->header), sizeof (struct eos_shard_bloom_filter_header), NULL, NULL);
-  g_output_stream_write ((GOutputStream*)stream, self->buckets, self->header.n_buckets * sizeof (uint32_t), NULL, NULL);
+  GOutputStream *out = (GOutputStream*) stream;
+  size_t header_size = sizeof (struct eos_shard_bloom_filter_header);
+  size_t buckets_size = self->header.n_buckets * sizeof (uint32_t);
+
+  g_output_stream_write (out, &self->header, header_size, NULL, NULL);
+  g_output_stream_write (out, self->buckets, buckets_size, NULL, NULL);
 }
 
 EosShardBloomFilter *
 eos_shard_bloom_filter_new_for_fd (int fd, off_t offset)
 {
   EosShardBloomFilter *self = g_new0 (EosShardBloomFilter, 1);
+  size_t header_size = sizeof (struct eos_shard_bloom_filter_header);
+  size_t buckets_size = self->header.n_buckets * sizeof (uint32_t);
+
   self->ref_count = 1;
 
-  size_t hdr_size = sizeof (struct eos_shard_bloom_filter_header);
-  pread (fd, &(self->header), hdr_size, offset);
-  //g_print("bloom from fd:     %d elem, %d bits, %d hashes, %d buckets, %f fp\n", self->header.n_elements, self->header.n_bits, self->header.n_hashes, self->header.n_buckets, self->header.fp_rate);
+  pread (fd, &self->header, header_size, offset);
 
-  self->buckets = (uint32_t*)calloc(self->header.n_buckets, sizeof(uint32_t));
-  pread (fd, self->buckets, self->header.n_buckets * sizeof (uint32_t), offset + hdr_size);
-  //g_print("                   %u\n", self->buckets[0]);
+  self->buckets = (uint32_t*) calloc (self->header.n_buckets, sizeof (uint32_t));
+  pread (fd, self->buckets, buckets_size, offset + header_size);
 
-  self->hashes = (uint32_t*)calloc(self->header.n_hashes, sizeof(uint32_t));
+  self->hashes = (uint32_t*) calloc (self->header.n_hashes, sizeof (uint32_t));
+
   return self;
 }
 
