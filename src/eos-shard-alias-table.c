@@ -26,7 +26,7 @@ eos_shard_alias_table_find_entries (EosShardAliasTable *self, char **keys, int n
 {
   GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
   int i;
-  for (i=0; i<n_keys; i++)
+  for (i=0; i < n_keys; i++)
     {
       char *value = eos_shard_alias_table_find_entry (self, keys[i]);
       g_hash_table_insert (table, g_strdup(keys[i]), value);
@@ -82,6 +82,10 @@ eos_shard_alias_table_new_from_shard (EosShardShardFile *shard)
   self->ref_count = 1;
   self->jlist = jlist;
   self->filter = filter;
+
+  g_free (filter_record);
+  g_free (jlist_record);
+
   return self;
 }
 
@@ -98,14 +102,14 @@ eos_shard_alias_table_new (int n_entries)
   self->filter = eos_shard_bloom_filter_new_for_params (n_entries, 0.01);
 
   // TODO clean up tmpfiles (when?)
-  self->jlist_file = g_file_new_tmp("shard_jlistXXXXXX", &jlist_io, NULL);
+  self->jlist_file = g_file_new_tmp ("shard_jlistXXXXXX", &jlist_io, NULL);
   jlist_out = (GFileOutputStream*) g_io_stream_get_output_stream ((GIOStream*) jlist_io);
   self->jlist_writer = eos_shard_jlist_writer_new_for_stream (jlist_out, n_entries);
 
-  self->filter_file = g_file_new_tmp("shard_filterXXXXXX", &filter_io, NULL);
-  self->filter_out = (GFileOutputStream*) g_io_stream_get_output_stream ((GIOStream*)filter_io);
+  self->filter_file = g_file_new_tmp ("shard_filterXXXXXX", &filter_io, NULL);
+  self->filter_out = (GFileOutputStream*) g_io_stream_get_output_stream ((GIOStream*) filter_io);
 
-  eos_shard_jlist_writer_begin(self->jlist_writer);
+  eos_shard_jlist_writer_begin (self->jlist_writer);
 
   return self;
 }
@@ -115,6 +119,11 @@ eos_shard_alias_table_free (EosShardAliasTable *self)
 {
   g_clear_object (&self->filter_file);
   g_clear_object (&self->jlist_file);
+  //g_clear_object (&self->jlist_io);
+  //g_clear_object (&self->filter_io);
+  //g_clear_object (&self->filter);
+  //g_clear_object (&self->jlist_writer);
+  //g_clear_object (&self->jlist);
   g_free (self);
 }
 
