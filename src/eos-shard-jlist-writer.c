@@ -1,8 +1,6 @@
 
 #include "eos-shard-jlist-writer.h"
 
-#include <malloc.h>
-
 EosShardJListWriter *
 eos_shard_jlist_writer_new_for_stream (GFileOutputStream *stream, int n_entries)
 {
@@ -13,7 +11,7 @@ eos_shard_jlist_writer_new_for_stream (GFileOutputStream *stream, int n_entries)
 
   // Ideally we want the number of blocks to equal the number of entries per block
   self->block_size = ceil (sqrt (n_entries));
-  self->offsets = (uint32_t*) malloc (self->block_size * sizeof (uint32_t));
+  self->offsets = (uint32_t*) calloc (self->block_size, sizeof (uint32_t));
   self->offsets_i = 0;
 
   return self;
