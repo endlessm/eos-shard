@@ -108,7 +108,7 @@ insert_record (EosShardWriter *self,
 
   eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
 
-  if (self->entries->len > 0) {
+  if (index > 0) {
     struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, index - 1);
     g_assert (memcmp (record_entry.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
   }
