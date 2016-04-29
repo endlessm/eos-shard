@@ -26,7 +26,7 @@ eos_shard_alias_table_find_entries (EosShardAliasTable *self, char **keys, int n
 {
   GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
   int i;
-  for (i=0; i<n_keys; i++) 
+  for (i=0; i<n_keys; i++)
     {
       char *value = eos_shard_alias_table_find_entry (self, keys[i]);
       g_hash_table_insert (table, g_strdup(keys[i]), value);
@@ -44,18 +44,16 @@ eos_shard_alias_table_add_entry (EosShardAliasTable *self, char *key, char *valu
 void
 eos_shard_alias_table_write_to_shard (EosShardAliasTable *self, EosShardWriter *writer)
 {
-  int filter_record_index, jlist_record_index;
-
   eos_shard_jlist_writer_finish (self->jlist_writer);
   eos_shard_bloom_filter_write_to_stream (self->filter, self->filter_out);
 
-  filter_record_index = eos_shard_writer_insert_record (writer, FILTER_RECORD_NAME);
-  eos_shard_writer_insert_blob (writer, EOS_SHARD_WRITER_BLOB_DATA, self->filter_file, MIMETYPE, FLAGS, filter_record_index);
-  eos_shard_writer_insert_blob (writer, EOS_SHARD_WRITER_BLOB_METADATA, self->filter_file, MIMETYPE, FLAGS, filter_record_index);
+  eos_shard_writer_add_record (writer, FILTER_RECORD_NAME);
+  eos_shard_writer_add_blob (writer, EOS_SHARD_WRITER_BLOB_DATA, self->filter_file, MIMETYPE, FLAGS);
+  eos_shard_writer_add_blob (writer, EOS_SHARD_WRITER_BLOB_METADATA, self->filter_file, MIMETYPE, FLAGS);
 
-  jlist_record_index = eos_shard_writer_insert_record (writer, JLIST_RECORD_NAME);
-  eos_shard_writer_insert_blob (writer, EOS_SHARD_WRITER_BLOB_DATA, self->jlist_file, MIMETYPE, FLAGS, jlist_record_index);
-  eos_shard_writer_insert_blob (writer, EOS_SHARD_WRITER_BLOB_METADATA, self->jlist_file, MIMETYPE, FLAGS, jlist_record_index);
+  eos_shard_writer_add_record (writer, JLIST_RECORD_NAME);
+  eos_shard_writer_add_blob (writer, EOS_SHARD_WRITER_BLOB_DATA, self->jlist_file, MIMETYPE, FLAGS);
+  eos_shard_writer_add_blob (writer, EOS_SHARD_WRITER_BLOB_METADATA, self->jlist_file, MIMETYPE, FLAGS);
 }
 
 EosShardAliasTable *
