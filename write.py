@@ -31,7 +31,7 @@ def test():
     shard = EosShard.ShardFile(path='foo.shard')
     shard.init(None)
     at = EosShard.AliasTable.new_from_shard(shard)
-    results = at.find_entries(words.keys())
+    results = at.find_entries(words)
     for key, value in enumerate(results):
         assert(rot13(key) == value)
 

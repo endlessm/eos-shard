@@ -1,6 +1,8 @@
 
 #include "eos-shard-jlist-writer.h"
 
+#include <malloc.h>
+
 EosShardJListWriter *
 eos_shard_jlist_writer_new_for_stream (GFileOutputStream *stream, int n_entries)
 {

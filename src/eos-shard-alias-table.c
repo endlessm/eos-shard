@@ -17,6 +17,7 @@ eos_shard_alias_table_find_entry (EosShardAliasTable *self, char *key)
 
 /**
  * eos_shard_alias_table_find_entries:
+ * @keys: (array length=n_keys):
  *
  * Returns: (transfer container) (element-type utf8 utf8): table
  */
