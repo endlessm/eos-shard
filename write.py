@@ -15,7 +15,7 @@ def rot13(s):
     return string.translate(s, t)
 
 words = [w.rstrip().lower() for w in open('/usr/share/dict/words')]
-words = sorted(words)
+words = sorted(words)[:10]
 
 def write_jlist():
     writer = EosShard.Writer()
@@ -32,7 +32,8 @@ def test():
     shard.init(None)
     at = EosShard.AliasTable.new_from_shard(shard)
     results = at.find_entries(words)
-    for key, value in enumerate(results):
+    for word, (key, value) in zip(words, sorted(results.iteritems())):
+        assert key == word
         assert(rot13(key) == value)
 
 write_jlist()
