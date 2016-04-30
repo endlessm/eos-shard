@@ -30,19 +30,6 @@
 #include "eos-shard-blob.h"
 #include "eos-shard-record.h"
 
-struct _EosShardShardFile
-{
-  GObject parent;
-  GVariant *header_variant;
-
-  GList *init_results;
-  GError *init_error;
-  guint init_state;
-
-  char *path;
-  int fd;
-};
-
 enum
 {
   PROP_0,
@@ -332,6 +319,62 @@ eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *hex_name)
 
   return TRUE;
 }
+
+/*
+static EosShardJList *
+_get_jlist (EosShardShardFile *self)
+{
+  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
+
+  // sha1("jlist") == c307a0144b2a9bfc5560eb1f7db921f0ca939e0c
+  if (!eos_shard_util_hex_name_to_raw_name (raw_name, "c307a0144b2a9bfc5560eb1f7db921f0ca939e0c")) {
+    g_print("idk wtf\n");
+    return NULL;
+  }
+
+  EosShardRecord *record = eos_shard_shard_file_find_record_by_raw_name (self, raw_name);
+  if (record == NULL)
+  {
+    g_print("no jlist record found\n");
+    return NULL;
+  }
+  EosShardBlob *data = record->data;
+  uint64_t offs = data->offs;
+
+  return _eos_shard_jlist_new(self->fd, offs);
+}
+
+static EosShardBloomFilter *
+_get_bloom_filter (EosShardShardFile *self)
+{
+  uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
+
+  // sha1("bloom filter") == ?????
+  if (!eos_shard_util_hex_name_to_raw_name (raw_name, "nope")) {
+    g_print("idk wtf\n");
+    return NULL;
+  }
+
+  EosShardRecord *record = eos_shard_shard_file_find_record_by_raw_name (self, raw_name);
+  if (record == NULL)
+  {
+    g_print("no bloom filter record found\n");
+    return NULL;
+  }
+  EosShardBlob *data = record->data;
+  uint64_t offs = data->offs;
+
+  return _eos_shard_bloom_filter_new_for_fd (self->fd, offs);
+}
+
+char *
+eos_shard_shard_file_get_alias (EosShardShardFile *self, char *alias)
+{
+  EosShardJList *jlist = _get_jlist(self);
+  EosShardBloomFilter *filter = _get_bloom_filter(self);
+  return "foo";
+}
+*/
 
 typedef struct {
   GVariant *records;

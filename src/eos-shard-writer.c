@@ -104,9 +104,8 @@ eos_shard_writer_init (EosShardWriter *self)
  * @self: an #EosShardWriter
  * @hex_name: the hexadecimal string which will act as this entry's ID
  *
- * Adds a data/metadata file pair to the shard file. These pairs must be added in
- * increasing hex_name order. Once all pairs have been added, call
- * eos_shard_writer_write() to save the shard file to disk.
+ * Adds a data/metadata file pair to the shard file. Once all pairs have been
+ * added, call eos_shard_writer_write() to save the shard file to disk.
  *
  * To set the individual fields of the blobs within the record,
  * use eos_shard_writer_add_blob().
@@ -116,14 +115,7 @@ eos_shard_writer_add_record (EosShardWriter *self,
                              char *hex_name)
 {
   struct eos_shard_writer_record_entry record_entry = {};
-
   eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
-
-  if (self->entries->len > 0) {
-    struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
-    g_assert (memcmp (record_entry.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE) > 0);
-  }
-
   g_array_append_val (self->entries, record_entry);
 }
 
@@ -258,10 +250,22 @@ write_variant (int fd, GVariant *variant)
                 g_variant_get_size (variant));
 }
 
+static gint
+compare_records (gconstpointer a, gconstpointer b)
+{
+  struct eos_shard_writer_record_entry *r_a, *r_b;
+  r_a = (struct eos_shard_writer_record_entry*) a;
+  r_b = (struct eos_shard_writer_record_entry*) b;
+  return memcmp (r_a->raw_name, r_b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
+}
+
 void
 eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
 {
   GVariant *variant;
+
+  // Sort our records to allow for binary searches on retrieval.
+  g_array_sort (self->entries, &compare_records);
 
   variant = header_entry_variant (self->entries);
   uint64_t header_size = g_variant_get_size (variant);

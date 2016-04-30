@@ -25,6 +25,7 @@
 
 #include "eos-shard-types.h"
 #include "eos-shard-format.h"
+#include "eos-shard-jlist.h"
 
 /**
  * EosShardShardFile:
@@ -32,6 +33,19 @@
  * A handle to a shard file. Allows for fast lookups of #EosShardRecords based on
  * their hex name.
  */
+
+struct _EosShardShardFile
+{
+  GObject parent;
+  GVariant *header_variant;
+
+  GList *init_results;
+  GError *init_error;
+  guint init_state;
+
+  char *path;
+  int fd;
+};
 
 #define EOS_SHARD_TYPE_SHARD_FILE (eos_shard_shard_file_get_type ())
 G_DECLARE_FINAL_TYPE (EosShardShardFile, eos_shard_shard_file, EOS_SHARD, SHARD_FILE, GObject)
@@ -46,6 +60,7 @@ GSList * eos_shard_shard_file_list_records (EosShardShardFile *self);
 GBytes * _eos_shard_shard_file_load_blob (EosShardShardFile            *self,
                                           EosShardBlob                 *blob,
                                           GError                      **error);
+char * eos_shard_shard_file_get_alias (EosShardShardFile *self, char *alias);
 
 gsize _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset);
 
