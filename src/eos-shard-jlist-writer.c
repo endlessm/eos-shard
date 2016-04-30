@@ -28,15 +28,17 @@ void eos_shard_jlist_writer_begin (EosShardJListWriter *self)
 void eos_shard_jlist_writer_add_entry (EosShardJListWriter *self, char *key, char *value)
 {
   GOutputStream *out = (GOutputStream*) self->stream;
+  uint64_t current_offset;
 
+  // At each block, note the current offset to be listed in the block table.
   if (self->entries_added % self->block_size == 0)
     {
-      uint64_t current_offset = g_seekable_tell ((GSeekable*) self->stream);
+      current_offset = g_seekable_tell ((GSeekable*) self->stream);
       self->offsets[self->offsets_i++] = current_offset;
     }
 
-  g_output_stream_write (out, key, strlen (key) + 1, NULL, NULL);
-  g_output_stream_write (out, value, strlen (value) + 1, NULL, NULL);
+  g_output_stream_write (out, key, CSTRING_SIZE(key), NULL, NULL);
+  g_output_stream_write (out, value, CSTRING_SIZE(value), NULL, NULL);
   self->entries_added++;
 }
 
@@ -44,13 +46,15 @@ void eos_shard_jlist_writer_finish (EosShardJListWriter *self)
 {
   int i;
   GOutputStream *out = (GOutputStream*) self->stream;
-
-  // Create a fake offset value to calculate the last block's length
-  uint64_t current_offset = g_seekable_tell ((GSeekable*) self->stream);
-  self->offsets[self->offsets_i] = current_offset;
-
+  struct jlist_hdr hdr = {};
   uint16_t n_blocks = self->offsets_i;
   struct jlist_block_table_entry blocks[n_blocks];
+  uint64_t current_offset;
+
+  // Create a fake offset value to calculate the last block's length
+  current_offset = g_seekable_tell ((GSeekable*) self->stream);
+  self->offsets[self->offsets_i] = current_offset;
+
   for (i=0; i < self->offsets_i; i++) 
     {
       struct jlist_block_table_entry block = {};
@@ -60,7 +64,6 @@ void eos_shard_jlist_writer_finish (EosShardJListWriter *self)
     }
 
   // First write our header now that we know where the block table begins.
-  struct jlist_hdr hdr = {};
   strcpy (hdr.magic, JLIST_MAGIC); 
   hdr.block_table_start = current_offset;
   g_seekable_seek ((GSeekable*) self->stream, 0, G_SEEK_SET, NULL, NULL);

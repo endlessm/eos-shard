@@ -25,8 +25,6 @@
 /* Details of the format and algorithm are given in here. */
 #include "eos-shard-jlist-format.h"
 
-#define CSTRING_SIZE(S) (strlen((S)) + 1)
-
 typedef struct _EosShardJList {
   int ref_count;
 

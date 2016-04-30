@@ -30,6 +30,8 @@
 
 #define JLIST_MAGIC "JListV1 "
 
+#define CSTRING_SIZE(S) (strlen((S)) + 1)
+
 /* The core format is a giant blob of key/value pairs, which are both C
  * strings (that is, delimited by NUL pointers). At the end, we have
  * regularly spaced offsets into the file, which divides the large blob
