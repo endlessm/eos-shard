@@ -30,4 +30,3 @@ EosShardJList * eos_shard_jlist_new_for_fd (int fd, off_t offset);
 EosShardJList * eos_shard_jlist_ref (EosShardJList *jlist);
 void eos_shard_jlist_unref (EosShardJList *jlist);
 char * eos_shard_jlist_lookup_key (EosShardJList *jlist, char *key);
-GHashTable * eos_shard_jlist_values (EosShardJList *jlist);

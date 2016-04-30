@@ -107,12 +107,13 @@ eos_shard_bloom_filter_new_for_fd (int fd, off_t offset)
 {
   EosShardBloomFilter *self = g_new0 (EosShardBloomFilter, 1);
   size_t header_size = sizeof (struct eos_shard_bloom_filter_header);
-  size_t buckets_size = self->header.n_buckets * sizeof (uint32_t);
+  size_t buckets_size;
 
   self->ref_count = 1;
 
   pread (fd, &self->header, header_size, offset);
 
+  buckets_size = self->header.n_buckets * sizeof (uint32_t);
   self->buckets = (uint32_t*) calloc (self->header.n_buckets, sizeof (uint32_t));
   pread (fd, self->buckets, buckets_size, offset + header_size);
 
@@ -139,7 +140,6 @@ eos_shard_bloom_filter_ref (EosShardBloomFilter *self)
 void
 eos_shard_bloom_filter_unref (EosShardBloomFilter *self)
 {
-  g_print("unreffin");
   if (--self->ref_count == 0)
     eos_shard_bloom_filter_free (self);
 }

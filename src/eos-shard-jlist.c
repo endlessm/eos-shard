@@ -199,62 +199,6 @@ read_cstring (int fd, int offset)
   return g_string_free (string, FALSE);
 }
 
-/**
- * eos_shard_jlist_values:
- *
- * Returns: (transfer full) (element-type utf8 utf8): table
- */
-GHashTable *
-eos_shard_jlist_values (EosShardJList *jlist)
-{
-  int fd = jlist->fd;
-  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
-
-  struct jlist_block_table tbl;
-  pread (fd, &tbl, sizeof(tbl), jlist->offset + jlist->hdr.block_table_start);
-
-  struct jlist_block_table_entry blocks[tbl.n_blocks];
-  pread (fd, blocks, sizeof(blocks), jlist->offset + jlist->hdr.block_table_start + 2);
-
-  int i;
-  for (i=0; i<tbl.n_blocks; i++) {
-    uint64_t offs = blocks[i].offset, end = offs + blocks[i].length;
-
-    while (offs < end) {
-      /* Now do a linear search for the key... */
-      char chunk[8196] = {};
-      int chunk_size = sizeof (chunk) - 1;
-
-      pread (fd, chunk, chunk_size, jlist->offset + offs);
-
-      char *str = chunk;
-      while (1) {
-        char *chunk_key = str;
-        uint64_t key_offs = offs;
-
-  #define FOO()                                                 \
-        offs += CSTRING_SIZE(str);                                        \
-        str += CSTRING_SIZE(str);                                         \
-        /* If we're truncated and reached the end of the chunk, then read again. */ \
-        if (str >= chunk + chunk_size || offs > end) {                    \
-          offs = key_offs;                                                \
-          break;                                                          \
-        }
-
-        /* We've read the key, now advance... */
-        FOO();
-
-        char *value = read_cstring(fd, jlist->offset + offs);
-        g_hash_table_insert(table, g_strdup(chunk_key), value);
-
-        /* Skip value. */
-        FOO();
-      }
-    }
-  }
-  return table;
-}
-
 char *
 eos_shard_jlist_lookup_key (EosShardJList *jlist,
                             char          *key)
