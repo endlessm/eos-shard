@@ -99,6 +99,19 @@ eos_shard_writer_init (EosShardWriter *self)
   g_array_set_clear_func (self->entries, (GDestroyNotify) eos_shard_writer_record_entry_clear);
 }
 
+static void
+blob_entry_init (struct eos_shard_writer_blob_entry *blob)
+{
+  blob->content_type = g_strdup ("");
+}
+
+static void
+record_entry_init (struct eos_shard_writer_record_entry *record)
+{
+  blob_entry_init (&record->metadata);
+  blob_entry_init (&record->data);
+}
+
 /**
  * eos_shard_writer_add_record:
  * @self: an #EosShardWriter
@@ -116,6 +129,7 @@ eos_shard_writer_add_record (EosShardWriter *self,
 {
   struct eos_shard_writer_record_entry record_entry = {};
   eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
+  record_entry_init (&record_entry);
   g_array_append_val (self->entries, record_entry);
 }
 
@@ -160,6 +174,7 @@ eos_shard_writer_add_blob (EosShardWriter *self,
   g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
   if (!content_type)
     content_type = g_file_info_get_content_type (info);
+  g_free (b->content_type);
   b->content_type = g_strdup (content_type);
   b->uncompressed_size = g_file_info_get_size (info);
 }
@@ -168,6 +183,10 @@ static void
 write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
 {
   g_autoptr(GError) error = NULL;
+
+  if (!blob->file)
+    return;
+
   GFileInputStream *file_stream = g_file_read (blob->file, NULL, &error);
   if (!file_stream) {
     g_error ("Could not read from %s: %s", g_file_get_path (blob->file), error->message);

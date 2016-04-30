@@ -444,6 +444,10 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
 GBytes *
 _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
 {
+  /* If we have no data, then return NULL back to the user. */
+  if (!blob->offs)
+    return NULL;
+
   uint8_t *buf = g_malloc (blob->size);
 
   size_t size_read = _eos_shard_shard_file_read_data (self, buf, blob->size, blob->offs);

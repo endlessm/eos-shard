@@ -233,5 +233,57 @@ describe('Basic Shard Writing', function () {
             }
         });
     });
+
+    describe('Allow records with no metadata / data', function() {
+        it('handles no metadata correctly', function() {
+            let shard_writer = new EosShard.Writer();
+            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob(EosShard.WriterBlob.DATA,
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                  'test',
+                                  EosShard.BlobFlags.NONE);
+            shard_writer.write(shard_path);
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+            let metadata_bytes = record.metadata.load_contents();
+            expect(metadata_bytes).toBeNull();
+            let metadata_stream = record.metadata.get_stream();
+            expect(metadata_stream).toBeNull();
+            let data_bytes = record.data.load_contents();
+            expect(data_bytes).not.toBeNull();
+            let data = data_bytes.get_data().toString();
+            expect(data).toMatch(/Lightsaber/);
+            let data_stream = record.data.get_stream();
+            expect(data_stream).not.toBeNull();
+        });
+
+        it('handles no data correctly', function() {
+            let shard_writer = new EosShard.Writer();
+            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob(EosShard.WriterBlob.METADATA,
+                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                  'application/json',
+                                  EosShard.BlobFlags.NONE);
+            shard_writer.write(shard_path);
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+            let metadata_bytes = record.metadata.load_contents();
+            expect(metadata_bytes).not.toBeNull();
+            let metadata = metadata_bytes.get_data().toString();
+            expect(metadata).toMatch(/eggs/);
+            let metadata_stream = record.metadata.get_stream();
+            expect(metadata_stream).not.toBeNull();
+            let data_bytes = record.data.load_contents();
+            expect(data_bytes).toBeNull();
+            let data_stream = record.data.get_stream();
+            expect(data_stream).toBeNull();
+        });
+    });
 });
 
