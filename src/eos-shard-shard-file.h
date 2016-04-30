@@ -17,8 +17,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_SHARD_FILE_H
-#define EOS_SHARD_SHARD_FILE_H
+#pragma once
 
 #include <gio/gio.h>
 #include <stdint.h>
@@ -48,6 +47,3 @@ GBytes * _eos_shard_shard_file_load_blob (EosShardShardFile            *self,
                                           GError                      **error);
 
 gsize _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset);
-
-#endif /* EOS_SHARD_SHARD_FILE_H */
-
