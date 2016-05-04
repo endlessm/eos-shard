@@ -1,4 +1,4 @@
-/* Copyright 2015 Endless Mobile, Inc. */
+/* Copyright 2016 Endless Mobile, Inc. */
 
 /* This file is part of eos-shard.
  *
@@ -22,15 +22,15 @@
 #include <gio/gio.h>
 
 #include "eos-shard-types.h"
-#include "eos-shard-format.h"
 
-/**
- * EosShardBlobStream:
- *
- * A #GInputStream to an #EosShardBlob's content.
- */
+GType eos_shard_dictionary_writer_get_type (void) G_GNUC_CONST;
 
-#define EOS_SHARD_TYPE_BLOB_STREAM (eos_shard_blob_stream_get_type ())
-G_DECLARE_FINAL_TYPE (EosShardBlobStream, eos_shard_blob_stream, EOS_SHARD, BLOB_STREAM, GInputStream)
+EosShardDictionaryWriter * eos_shard_dictionary_writer_new_for_stream (GFileOutputStream *stream, int n_entries);
 
-EosShardBlobStream * _eos_shard_blob_stream_new_for_blob (EosShardBlob *blob, EosShardShardFile *shard_file);
+void eos_shard_dictionary_writer_begin (EosShardDictionaryWriter *self);
+void eos_shard_dictionary_writer_add_entry (EosShardDictionaryWriter *self,
+                                            char *key,
+                                            char *value,
+                                            GError **error);
+void eos_shard_dictionary_writer_finish (EosShardDictionaryWriter *self,
+                                         GError **error);
