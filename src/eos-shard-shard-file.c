@@ -29,7 +29,6 @@
 #include "eos-shard-format.h"
 #include "eos-shard-blob.h"
 #include "eos-shard-record.h"
-#include "eos-shard-dictionary.h"
 
 struct _EosShardShardFile
 {
@@ -445,10 +444,6 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
 GBytes *
 _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GError **error)
 {
-  /* If we have no data, then return NULL back to the user. */
-  if (!blob->offs)
-    return NULL;
-
   uint8_t *buf = g_malloc (blob->size);
 
   size_t size_read = _eos_shard_shard_file_read_data (self, buf, blob->size, blob->offs);
@@ -492,13 +487,6 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   }
 
   return bytes;
-}
-
-EosShardDictionary *
-_eos_shard_shard_file_new_dictionary (EosShardShardFile *self, EosShardBlob *blob)
-{
-  g_assert (!(blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB));
-  return eos_shard_dictionary_new_for_fd (self->fd, blob->offs);
 }
 
 gsize

@@ -17,7 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef EOS_SHARD_WRITER_H
+#define EOS_SHARD_WRITER_H
 
 #include <gio/gio.h>
 #include "eos-shard-format.h"
@@ -48,3 +49,5 @@ void eos_shard_writer_add_blob (EosShardWriter *self,
                                 EosShardBlobFlags flags);
 void eos_shard_writer_write_to_fd (EosShardWriter *self, int fd);
 void eos_shard_writer_write (EosShardWriter *self, char *path);
+
+#endif /* EOS_SHARD_WRITER_H */
