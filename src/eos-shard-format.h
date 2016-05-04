@@ -17,7 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef EOS_SHARD_FORMAT_H
+#define EOS_SHARD_FORMAT_H
 
 #include <stdint.h>
 
@@ -43,3 +44,5 @@ typedef enum
 
 #define EOS_SHARD_RAW_NAME_SIZE 20
 #define EOS_SHARD_HEX_NAME_SIZE (EOS_SHARD_RAW_NAME_SIZE*2)
+
+#endif /* EOS_SHARD_FORMAT_H */
