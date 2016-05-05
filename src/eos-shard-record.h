@@ -17,8 +17,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_RECORD_H
-#define EOS_SHARD_RECORD_H
+#pragma once
 
 #include <gio/gio.h>
 #include <stdint.h>
@@ -52,5 +51,3 @@ char * eos_shard_record_get_hex_name (EosShardRecord *record);
 
 EosShardRecord * eos_shard_record_ref (EosShardRecord *record);
 void eos_shard_record_unref (EosShardRecord *record);
-
-#endif /* EOS_SHARD_RECORD_H */

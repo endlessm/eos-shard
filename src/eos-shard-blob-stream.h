@@ -17,8 +17,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_BLOB_STREAM_H
-#define EOS_SHARD_BLOB_STREAM_H
+#pragma once
 
 #include <gio/gio.h>
 
@@ -35,5 +34,3 @@
 G_DECLARE_FINAL_TYPE (EosShardBlobStream, eos_shard_blob_stream, EOS_SHARD, BLOB_STREAM, GInputStream)
 
 EosShardBlobStream * _eos_shard_blob_stream_new_for_blob (EosShardBlob *blob, EosShardShardFile *shard_file);
-
-#endif /* EOS_SHARD_BLOB_STREAM_H */

@@ -17,8 +17,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EOS_SHARD_TYPES_H
-#define EOS_SHARD_TYPES_H
+#pragma once
 
 typedef struct _EosShardShardFile EosShardShardFile;
 typedef struct _EosShardRecord EosShardRecord;
@@ -26,5 +25,3 @@ typedef struct _EosShardBlob EosShardBlob;
 typedef struct _EosShardBlobStream EosShardBlobStream;
 typedef struct _EosShardDictionary EosShardDictionary;
 typedef struct _EosShardDictionaryWriter EosShardDictionaryWriter;
-
-#endif /* EOS_SHARD_TYPES_H */
