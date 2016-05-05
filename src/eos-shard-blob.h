@@ -66,4 +66,6 @@ EosShardBlob * _eos_shard_blob_new_for_variant (EosShardShardFile *shard_file, G
 gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
 goffset eos_shard_blob_get_offset (EosShardBlob *blob);
 
+EosShardDictionary * eos_shard_blob_load_as_dictionary (EosShardBlob *blob);
+
 #endif /* EOS_SHARD_BLOB_H */

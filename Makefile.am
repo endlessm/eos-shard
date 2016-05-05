@@ -30,7 +30,11 @@ eos_shard_headers = \
 	src/eos-shard-record.h \
 	src/eos-shard-blob.h \
 	src/eos-shard-blob-stream.h \
+	src/eos-shard-bloom-filter.h \
 	src/eos-shard-writer.h \
+	src/eos-shard-dictionary.h \
+	src/eos-shard-dictionary-writer.h \
+	src/eos-shard-dictionary-format.h \
 	src/eos-shard-enums.h \
 	src/eos-shard-format.h \
 	src/eos-shard-types.h \
@@ -41,7 +45,10 @@ eos_shard_sources = \
 	src/eos-shard-record.c \
 	src/eos-shard-blob.c \
 	src/eos-shard-blob-stream.c \
+	src/eos-shard-bloom-filter.c \
 	src/eos-shard-writer.c \
+	src/eos-shard-dictionary.c \
+	src/eos-shard-dictionary-writer.c \
 	src/eos-shard-enums.c \
 	$(NULL)
 
@@ -54,7 +61,7 @@ libeos_shard_@SHARD_API_VERSION@_la_SOURCES = \
 	$(eos_shard_headers) \
 	$(eos_shard_sources) \
 	$(NULL)
-libeos_shard_@SHARD_API_VERSION@_la_LIBADD = $(LIBEOS_SHARD_LIBS)
+libeos_shard_@SHARD_API_VERSION@_la_LIBADD = $(LIBEOS_SHARD_LIBS) -lm
 libeos_shard_@SHARD_API_VERSION@_la_LDFLAGS = \
 	-version-info @SHARD_LT_VERSION@ \
 	$(AM_LDFLAGS) \
@@ -101,6 +108,7 @@ JS_LOG_DRIVER_FLAGS = --comments
 
 TESTS = \
 	test/writerSpec.js \
+	test/dictionarySpec.js \
 	test/streamSpec.js \
 	run_coverage.coverage \
 	$(NULL)

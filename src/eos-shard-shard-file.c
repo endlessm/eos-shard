@@ -29,6 +29,7 @@
 #include "eos-shard-format.h"
 #include "eos-shard-blob.h"
 #include "eos-shard-record.h"
+#include "eos-shard-dictionary.h"
 
 struct _EosShardShardFile
 {
@@ -487,6 +488,13 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   }
 
   return bytes;
+}
+
+EosShardDictionary *
+_eos_shard_shard_file_new_dictionary (EosShardShardFile *self, EosShardBlob *blob)
+{
+  g_assert (!(blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB));
+  return eos_shard_dictionary_new_for_fd (self->fd, blob->offs);
 }
 
 gsize

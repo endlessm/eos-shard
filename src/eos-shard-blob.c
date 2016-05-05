@@ -139,6 +139,12 @@ eos_shard_blob_load_contents (EosShardBlob  *blob,
   return _eos_shard_shard_file_load_blob (blob->shard_file, blob, error);
 }
 
+EosShardDictionary *
+eos_shard_blob_load_as_dictionary (EosShardBlob *blob)
+{
+  return _eos_shard_shard_file_new_dictionary (blob->shard_file, blob);
+}
+
 EosShardBlob *
 _eos_shard_blob_new_for_variant (EosShardShardFile           *shard_file,
                                  GVariant                    *blob_variant)
