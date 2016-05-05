@@ -74,6 +74,10 @@ eos_shard_blob_get_content_type (EosShardBlob *blob)
 GInputStream *
 eos_shard_blob_get_stream (EosShardBlob *blob)
 {
+  /* If we have no data, then return NULL back to the user. */
+  if (!blob->offs)
+    return NULL;
+
   g_autoptr(GInputStream) blob_stream = G_INPUT_STREAM (_eos_shard_blob_stream_new_for_blob (blob, blob->shard_file));
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
