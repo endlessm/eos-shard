@@ -144,9 +144,9 @@ eos_shard_blob_load_contents (EosShardBlob  *blob,
 }
 
 EosShardDictionary *
-eos_shard_blob_load_as_dictionary (EosShardBlob *blob)
+eos_shard_blob_load_as_dictionary (EosShardBlob *blob, GError **error)
 {
-  return _eos_shard_shard_file_new_dictionary (blob->shard_file, blob);
+  return _eos_shard_shard_file_new_dictionary (blob->shard_file, blob, error);
 }
 
 EosShardBlob *

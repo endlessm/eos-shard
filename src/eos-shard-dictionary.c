@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "eos-shard-bloom-filter.h"
+#include "eos-shard-enums.h"
 
 /* Details of the format and algorithm are given in here. */
 #include "eos-shard-dictionary-format.h"
@@ -42,9 +43,9 @@ typedef struct _EosShardDictionary {
 static gboolean
 dictionary_open (struct dictionary_header *header, int fd, int offset)
 {
-  pread (fd, header, sizeof (*header), offset);
+  ssize_t len = pread (fd, header, sizeof (*header), offset);
 
-  if (memcmp (header->magic, DICTIONARY_MAGIC, sizeof (header->magic)) != 0)
+  if (len < -1 || memcmp (header->magic, DICTIONARY_MAGIC, sizeof (header->magic)) != 0)
     return FALSE;
 
   return TRUE;
@@ -54,17 +55,31 @@ dictionary_open (struct dictionary_header *header, int fd, int offset)
 static gboolean
 dictionary_find_block (EosShardDictionary *dictionary,
                        char *key,
-                       struct dictionary_block_table_entry *block_out)
+                       struct dictionary_block_table_entry *block_out,
+                       GError **error)
 {
+  ssize_t len;
   int fd = dictionary->fd;
 
   int key_size = CSTRING_SIZE (key);
 
   struct dictionary_block_table tbl;
-  pread (fd, &tbl, sizeof(tbl), dictionary->offset + dictionary->header.block_table_start);
+  len = pread (fd, &tbl, sizeof(tbl), dictionary->offset + dictionary->header.block_table_start);
+
+  if (len < 0) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_DICTIONARY_CORRUPT,
+                 "The dictionary is corrupt.");
+    return FALSE;
+  }
 
   struct dictionary_block_table_entry blocks[tbl.n_blocks];
-  pread (fd, blocks, sizeof(blocks), dictionary->offset + dictionary->header.block_table_start + 2);
+  len = pread (fd, blocks, sizeof(blocks), dictionary->offset + dictionary->header.block_table_start + 2);
+
+  if (len < 0) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_DICTIONARY_CORRUPT,
+                 "The dictionary is corrupt.");
+    return FALSE;
+  }
 
   /* bsearch */
   int lo = 0, hi = tbl.n_blocks - 1;
@@ -74,7 +89,13 @@ dictionary_find_block (EosShardDictionary *dictionary,
 
     char chunk_key[key_size];
     memset (chunk_key, 0, key_size);
-    pread (fd, chunk_key, key_size, dictionary->offset + block_offs);
+    len = pread (fd, chunk_key, key_size, dictionary->offset + block_offs);
+
+    if (len < 0) {
+      g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_DICTIONARY_CORRUPT,
+                   "The dictionary is corrupt.");
+      return FALSE;
+    }
 
     /* We want to find the first block where the chunk_key is greater than the key,
      * since the block before that has the value we want. */
@@ -99,8 +120,10 @@ dictionary_find_block (EosShardDictionary *dictionary,
 static uint64_t
 dictionary_lookup_key_in_block (EosShardDictionary *dictionary,
                                 struct dictionary_block_table_entry block,
-                                char *key)
+                                char *key,
+                                GError **error)
 {
+  ssize_t len;
   int fd = dictionary->fd;
   uint64_t offs = block.offset, end = offs + block.length;
 
@@ -109,7 +132,13 @@ dictionary_lookup_key_in_block (EosShardDictionary *dictionary,
     char chunk[DICTIONARY_MAX_KEY_SIZE] = {};
     int chunk_size = sizeof (chunk) - 1;
 
-    pread (fd, chunk, chunk_size, dictionary->offset + offs);
+    len = pread (fd, chunk, chunk_size, dictionary->offset + offs);
+
+    if (len < 0) {
+      g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_DICTIONARY_CORRUPT,
+                   "The dictionary is corrupt.");
+      return 0;
+    }
 
     char *str = chunk;
     while (1) {
@@ -140,7 +169,7 @@ dictionary_lookup_key_in_block (EosShardDictionary *dictionary,
 }
 
 static uint64_t
-dictionary_lookup_key (EosShardDictionary *dictionary, char *key)
+dictionary_lookup_key (EosShardDictionary *dictionary, char *key, GError **error)
 {
   if (dictionary->bloom_filter)
     if (!bloom_filter_test (dictionary->bloom_filter, key))
@@ -148,19 +177,22 @@ dictionary_lookup_key (EosShardDictionary *dictionary, char *key)
 
   struct dictionary_block_table_entry block;
 
-  if (!dictionary_find_block (dictionary, key, &block))
+  if (!dictionary_find_block (dictionary, key, &block, error))
     return 0;
 
-  return dictionary_lookup_key_in_block (dictionary, block, key);
+  return dictionary_lookup_key_in_block (dictionary, block, key, error);
 }
 
 EosShardDictionary *
-eos_shard_dictionary_new_for_fd (int fd, goffset offset)
+eos_shard_dictionary_new_for_fd (int fd, goffset offset, GError **error)
 {
   struct dictionary_header header;
 
-  if (!dictionary_open (&header, fd, offset))
+  if (!dictionary_open (&header, fd, offset)) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_DICTIONARY_CORRUPT,
+                 "The dictionary is corrupt.");
     return NULL;
+  }
 
   EosShardDictionary *dictionary = g_new0 (EosShardDictionary, 1);
   dictionary->ref_count = 1;
@@ -170,7 +202,8 @@ eos_shard_dictionary_new_for_fd (int fd, goffset offset)
 
   if (dictionary->header.bloom_filter_start != 0) {
     dictionary->bloom_filter = &dictionary->_bloom_filter;
-    bloom_filter_init_for_fd (dictionary->bloom_filter, fd, offset + dictionary->header.bloom_filter_start);
+    if (!bloom_filter_init_for_fd (dictionary->bloom_filter, fd, offset + dictionary->header.bloom_filter_start, error))
+      return NULL;
   }
 
   return dictionary;
@@ -203,10 +236,11 @@ static char *
 read_cstring (int fd, int offset)
 {
   GString *string = g_string_new (NULL);
+  ssize_t len;
 
   while (1) {
     char chunk[8192] = {};
-    int len = pread (fd, chunk, sizeof (chunk) - 1, offset);
+    len = pread (fd, chunk, sizeof (chunk) - 1, offset);
     g_string_append_len (string, chunk, len);
     if (strlen (chunk) < len)
       break;
@@ -217,9 +251,9 @@ read_cstring (int fd, int offset)
 
 /* Find a key within the dictionary, returning the value stored at key if found */
 char *
-eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary, char *key)
+eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary, char *key, GError **error)
 {
-  uint64_t value_offset = dictionary_lookup_key (dictionary, key);
+  uint64_t value_offset = dictionary_lookup_key (dictionary, key, error);
   if (value_offset == 0)
     return NULL;
   return read_cstring (dictionary->fd, dictionary->offset + value_offset);
