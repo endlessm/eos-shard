@@ -495,10 +495,10 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
 }
 
 EosShardDictionary *
-_eos_shard_shard_file_new_dictionary (EosShardShardFile *self, EosShardBlob *blob)
+_eos_shard_shard_file_new_dictionary (EosShardShardFile *self, EosShardBlob *blob, GError **error)
 {
   g_assert (!(blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB));
-  return eos_shard_dictionary_new_for_fd (self->fd, blob->offs);
+  return eos_shard_dictionary_new_for_fd (self->fd, blob->offs, error);
 }
 
 gsize

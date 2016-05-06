@@ -37,7 +37,10 @@ struct bloom_filter {
 };
 
 void bloom_filter_init_for_params (struct bloom_filter *self, int n, double p);
-void bloom_filter_init_for_fd (struct bloom_filter *self, int fd, off_t offset);
+gboolean bloom_filter_init_for_fd (struct bloom_filter *self,
+                                   int fd,
+                                   off_t offset,
+                                   GError **error);
 
 void bloom_filter_write_to_stream (struct bloom_filter *self, GOutputStream *out);
 

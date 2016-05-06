@@ -18,6 +18,7 @@
  */
 
 #include "eos-shard-bloom-filter.h"
+#include "eos-shard-enums.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -35,17 +36,32 @@ bloom_filter_init_for_params (struct bloom_filter *self, int n, double p)
   self->buckets = (uint32_t*) calloc (self->header.n_buckets, sizeof (uint32_t));
 }
 
-void
-bloom_filter_init_for_fd (struct bloom_filter *self, int fd, off_t offset)
+gboolean
+bloom_filter_init_for_fd (struct bloom_filter *self, int fd, off_t offset, GError **error)
 {
   size_t buckets_size;
+  ssize_t len;
 
-  pread (fd, &self->header, sizeof (self->header), offset);
+  len = pread (fd, &self->header, sizeof (self->header), offset);
+
+  if (len < 0) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOOM_FILTER_CORRUPT,
+                 "The bloom filter is corrupt.");
+    return FALSE;
+  }
 
   buckets_size = self->header.n_buckets * sizeof (uint32_t);
   self->buckets = (uint32_t*) calloc (self->header.n_buckets, sizeof (uint32_t));
 
-  pread (fd, self->buckets, buckets_size, offset + sizeof (self->header));
+  len = pread (fd, self->buckets, buckets_size, offset + sizeof (self->header));
+
+  if (len < 0) {
+    g_set_error (error, EOS_SHARD_ERROR, EOS_SHARD_ERROR_BLOOM_FILTER_CORRUPT,
+                 "The bloom filter is corrupt.");
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 void

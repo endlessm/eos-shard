@@ -25,8 +25,12 @@
 
 GType eos_shard_dictionary_get_type (void) G_GNUC_CONST;
 
-EosShardDictionary * eos_shard_dictionary_new_for_fd (int fd, goffset offset);
+EosShardDictionary * eos_shard_dictionary_new_for_fd (int fd,
+                                                      goffset offset,
+                                                      GError **error);
 
 EosShardDictionary * eos_shard_dictionary_ref (EosShardDictionary *dictionary);
 void eos_shard_dictionary_unref (EosShardDictionary *dictionary);
-char * eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary, char *key);
+char * eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary,
+                                        char *key,
+                                        GError **error);
