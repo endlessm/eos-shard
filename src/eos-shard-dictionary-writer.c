@@ -153,7 +153,7 @@ eos_shard_dictionary_writer_finish (EosShardDictionaryWriter *self, GError **err
 
   /* Write out our header now that we know where the block table begins. */
   struct dictionary_header header = {};
-  strcpy (header.magic, DICTIONARY_MAGIC);
+  memcpy (header.magic, DICTIONARY_MAGIC, sizeof (header.magic));
   header.block_table_start = block_table_start;
   header.bloom_filter_start = bloom_filter_start;
   g_seekable_seek (G_SEEKABLE (self->stream), 0, G_SEEK_SET, NULL, NULL);
