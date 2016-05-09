@@ -23,12 +23,11 @@ const EosShard = imports.gi.EosShard;
 const TestUtils = imports.utils;
 
 // Returns a limited list of lowercased, sorted list of words from /usr/share/dict
-function read_usr_share_dict (limit) {
-    let f = Gio.File.new_for_path('/usr/share/dict/words');
+function read_dict () {
+    let f = TestUtils.getTestFile('words');
     let text = f.load_contents(null).toString();
     let words = text.split('\n').map((word) => word.toLowerCase());
-    if (limit === undefined) limit = words.length;
-    return words.sort().slice(0, limit);
+    return words.sort();
 }
 
 describe('Dictionary', function () {
@@ -113,7 +112,7 @@ describe('Dictionary', function () {
     describe('stress test', function () {
         let dictionary, words;
         beforeEach(function () {
-            words = read_usr_share_dict(1000);
+            words = read_dict();
             let w = EosShard.DictionaryWriter.new_for_stream(dict_stream, words.length);
             w.begin();
             words.forEach((word) => w.add_entry(word, word.toUpperCase()));
