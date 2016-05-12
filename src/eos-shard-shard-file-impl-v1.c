@@ -114,7 +114,7 @@ blob_new_for_variant (EosShardShardFile           *shard_file,
   const void *checksum;
 
   blob->shard_file = g_object_ref (shard_file);
-  g_variant_get (blob_variant, "(&s@ayuttt)",
+  g_variant_get (blob_variant, "(s@ayuttt)",
                  &blob->content_type,
                  &checksum_variant,
                  &blob->flags,

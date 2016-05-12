@@ -32,6 +32,7 @@ static void
 eos_shard_blob_free (EosShardBlob *blob)
 {
   g_clear_object (&blob->shard_file);
+  g_free (blob->content_type);
   g_free (blob);
 }
 

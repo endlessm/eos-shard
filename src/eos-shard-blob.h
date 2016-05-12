@@ -49,7 +49,7 @@ struct _EosShardBlob {
   int ref_count;
   EosShardShardFile *shard_file;
 
-  const char *content_type;
+  char *content_type;
   EosShardBlobFlags flags;
   uint8_t checksum[0x20];
   uint64_t offs;
