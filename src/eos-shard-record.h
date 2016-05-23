@@ -51,3 +51,5 @@ char * eos_shard_record_get_hex_name (EosShardRecord *record);
 
 EosShardRecord * eos_shard_record_ref (EosShardRecord *record);
 void eos_shard_record_unref (EosShardRecord *record);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (EosShardRecord, eos_shard_record_unref)

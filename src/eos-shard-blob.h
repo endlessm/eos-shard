@@ -73,3 +73,5 @@ gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
 goffset eos_shard_blob_get_offset (EosShardBlob *blob);
 
 EosShardDictionary * eos_shard_blob_load_as_dictionary (EosShardBlob *blob, GError **error);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (EosShardBlob, eos_shard_blob_unref)
