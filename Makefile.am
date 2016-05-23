@@ -111,9 +111,8 @@ JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
 
 TESTS = \
-	test/writerSpec.js \
+	test/shardV1Spec.js \
 	test/dictionarySpec.js \
-	test/streamSpec.js \
 	run_coverage.coverage \
 	$(NULL)
 
