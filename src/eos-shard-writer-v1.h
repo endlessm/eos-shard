@@ -20,10 +20,11 @@
 #pragma once
 
 #include <gio/gio.h>
+#include "eos-shard-format-v1.h"
 #include "eos-shard-blob.h"
 
 /**
- * EosShardWriter:
+ * EosShardWriterV1:
  *
  * An object for packing file into a shard file. Records are added as pairs of
  * data/metadata, and are tagged with a unique 40 character hex name.
@@ -31,20 +32,20 @@
  * Files must be added in increasing order based on their name.
  */
 
-#define EOS_SHARD_TYPE_WRITER (eos_shard_writer_get_type ())
-G_DECLARE_FINAL_TYPE (EosShardWriter, eos_shard_writer, EOS_SHARD, WRITER, GObject)
+#define EOS_SHARD_TYPE_WRITER_V1 (eos_shard_writer_v1_get_type ())
+G_DECLARE_FINAL_TYPE (EosShardWriterV1, eos_shard_writer_v1, EOS_SHARD, WRITER_V1, GObject)
 
 typedef enum {
-  EOS_SHARD_WRITER_BLOB_METADATA,
-  EOS_SHARD_WRITER_BLOB_DATA,
-} EosShardWriterBlob;
+  EOS_SHARD_WRITER_V1_BLOB_METADATA,
+  EOS_SHARD_WRITER_V1_BLOB_DATA,
+} EosShardWriterV1Blob;
 
-void eos_shard_writer_add_record (EosShardWriter *self,
-                                  char *hex_name);
-void eos_shard_writer_add_blob (EosShardWriter *self,
-                                EosShardWriterBlob which_blob,
-                                GFile *file,
-                                const char *content_type,
-                                EosShardBlobFlags flags);
-void eos_shard_writer_write_to_fd (EosShardWriter *self, int fd);
-void eos_shard_writer_write (EosShardWriter *self, char *path);
+void eos_shard_writer_v1_add_record (EosShardWriterV1 *self,
+                                     char *hex_name);
+void eos_shard_writer_v1_add_blob (EosShardWriterV1 *self,
+                                   EosShardWriterV1Blob which_blob,
+                                   GFile *file,
+                                   const char *content_type,
+                                   EosShardBlobFlags flags);
+void eos_shard_writer_v1_write_to_fd (EosShardWriterV1 *self, int fd);
+void eos_shard_writer_v1_write (EosShardWriterV1 *self, char *path);

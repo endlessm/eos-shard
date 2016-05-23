@@ -34,7 +34,7 @@ eos_shard_headers = \
 	src/eos-shard-blob.h \
 	src/eos-shard-blob-stream.h \
 	src/eos-shard-bloom-filter.h \
-	src/eos-shard-writer.h \
+	src/eos-shard-writer-v1.h \
 	src/eos-shard-dictionary.h \
 	src/eos-shard-dictionary-writer.h \
 	src/eos-shard-dictionary-format.h \
@@ -50,7 +50,7 @@ eos_shard_sources = \
 	src/eos-shard-blob.c \
 	src/eos-shard-blob-stream.c \
 	src/eos-shard-bloom-filter.c \
-	src/eos-shard-writer.c \
+	src/eos-shard-writer-v1.c \
 	src/eos-shard-dictionary.c \
 	src/eos-shard-dictionary-writer.c \
 	src/eos-shard-enums.c \
