@@ -26,27 +26,36 @@ INTROSPECTION_GIRS = EosShard-@SHARD_API_VERSION@.gir
 INTROSPECTION_SCANNER_ARGS = --warn-all --warn-error
 
 eos_shard_headers = \
+	src/eos-shard-format-v1.h \
+	src/eos-shard-format-v2.h \
 	src/eos-shard-shard-file.h \
+	src/eos-shard-shard-file-impl.h \
+	src/eos-shard-shard-file-impl-v1.h \
+	src/eos-shard-shard-file-impl-v2.h \
 	src/eos-shard-record.h \
 	src/eos-shard-blob.h \
 	src/eos-shard-blob-stream.h \
 	src/eos-shard-bloom-filter.h \
-	src/eos-shard-writer.h \
+	src/eos-shard-writer-v1.h \
+	src/eos-shard-writer-v2.h \
 	src/eos-shard-dictionary.h \
 	src/eos-shard-dictionary-writer.h \
 	src/eos-shard-dictionary-format.h \
 	src/eos-shard-enums.h \
-	src/eos-shard-format.h \
 	src/eos-shard-types.h \
 	$(NULL)
 
 eos_shard_sources = \
 	src/eos-shard-shard-file.c \
+	src/eos-shard-shard-file-impl.c \
+	src/eos-shard-shard-file-impl-v1.c \
+	src/eos-shard-shard-file-impl-v2.c \
 	src/eos-shard-record.c \
 	src/eos-shard-blob.c \
 	src/eos-shard-blob-stream.c \
 	src/eos-shard-bloom-filter.c \
-	src/eos-shard-writer.c \
+	src/eos-shard-writer-v1.c \
+	src/eos-shard-writer-v2.c \
 	src/eos-shard-dictionary.c \
 	src/eos-shard-dictionary-writer.c \
 	src/eos-shard-enums.c \
@@ -107,9 +116,9 @@ JS_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 JS_LOG_DRIVER_FLAGS = --comments
 
 TESTS = \
-	test/writerSpec.js \
+	test/shardV1Spec.js \
+	test/shardV2Spec.js \
 	test/dictionarySpec.js \
-	test/streamSpec.js \
 	run_coverage.coverage \
 	$(NULL)
 

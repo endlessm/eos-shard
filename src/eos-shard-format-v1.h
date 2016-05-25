@@ -19,17 +19,18 @@
 
 #pragma once
 
-#include <gio/gio.h>
+#include <stdint.h>
 
-#include "eos-shard-types.h"
+/* The base file format consists of a uint64_t, which defines
+ * the header's length. After that comes an EOS_SHARD_HEADER_ENTRY. */
 
-/**
- * EosShardBlobStream:
- *
- * A #GInputStream to an #EosShardBlob's content.
- */
+#define EOS_SHARD_V1_MAGIC ("ShardV1")
 
-#define EOS_SHARD_TYPE_BLOB_STREAM (eos_shard_blob_stream_get_type ())
-G_DECLARE_FINAL_TYPE (EosShardBlobStream, eos_shard_blob_stream, EOS_SHARD, BLOB_STREAM, GInputStream)
+/* content-type, sha256 checksum, flags, offset, size, uncompressed-size */
+#define EOS_SHARD_V1_BLOB_ENTRY "(sayuttt)"
 
-EosShardBlobStream * _eos_shard_blob_stream_new_for_blob (EosShardBlob *blob, EosShardShardFile *shard_file);
+/* raw name, metadata blob, data blob */
+#define EOS_SHARD_V1_RECORD_ENTRY "(ay" EOS_SHARD_V1_BLOB_ENTRY EOS_SHARD_V1_BLOB_ENTRY ")"
+
+/* magic, array of records */
+#define EOS_SHARD_V1_HEADER_ENTRY "(sa" EOS_SHARD_V1_RECORD_ENTRY ")"

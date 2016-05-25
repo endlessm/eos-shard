@@ -23,7 +23,9 @@
 #include <stdint.h>
 
 #include "eos-shard-types.h"
-#include "eos-shard-format.h"
+
+#define EOS_SHARD_RAW_NAME_SIZE 20
+#define EOS_SHARD_HEX_NAME_SIZE (EOS_SHARD_RAW_NAME_SIZE*2)
 
 /**
  * EosShardShardFile:
@@ -50,3 +52,5 @@ EosShardDictionary * _eos_shard_shard_file_new_dictionary (EosShardShardFile *se
                                                            GError **error);
 
 gsize _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset);
+
+EosShardBlob * _eos_shard_shard_file_lookup_blob (EosShardShardFile *self, EosShardRecord *record, const char *name);

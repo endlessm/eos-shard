@@ -23,10 +23,9 @@
 
 #include "eos-shard-shard-file.h"
 #include "eos-shard-blob.h"
-#include "eos-shard-format.h"
 
-static EosShardRecord *
-eos_shard_record_new (void)
+EosShardRecord *
+_eos_shard_record_new (void)
 {
   EosShardRecord *record = g_new0 (EosShardRecord, 1);
   record->ref_count = 1;
@@ -87,39 +86,18 @@ eos_shard_record_get_hex_name (EosShardRecord *record)
   return hex_name;
 }
 
-EosShardRecord *
-_eos_shard_record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
+/**
+ * eos_shard_record_lookup_blob:
+ * @record: An #EosShardRecord
+ * @name: The name to look up the blob by.
+ *
+ * Returns: (transfer full): the blob
+ */
+EosShardBlob *
+eos_shard_record_lookup_blob (EosShardRecord *record,
+                              const char     *name)
 {
-  EosShardRecord *record = eos_shard_record_new ();
-  g_autoptr(GVariant) raw_name_variant;
-  g_autoptr(GVariant) metadata_variant;
-  g_autoptr(GVariant) data_variant;
-  size_t n_elts;
-  const void *raw_name;
-
-  record->shard_file = g_object_ref (shard_file);
-  g_variant_get (record_variant, "(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
-                 &raw_name_variant,
-                 &metadata_variant,
-                 &data_variant);
-  raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
-  if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
-    goto corrupt;
-
-  record->raw_name = raw_name;
-  record->metadata = _eos_shard_blob_new_for_variant (shard_file, metadata_variant);
-  if (!record->metadata)
-    goto corrupt;
-
-  record->data = _eos_shard_blob_new_for_variant (shard_file, data_variant);
-  if (!record->data)
-    goto corrupt;
-
-  return record;
-
- corrupt:
-  eos_shard_record_unref (record);
-  return NULL;
+  return _eos_shard_shard_file_lookup_blob (record->shard_file, record, name);
 }
 
 G_DEFINE_BOXED_TYPE (EosShardRecord, eos_shard_record,

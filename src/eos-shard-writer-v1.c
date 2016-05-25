@@ -17,7 +17,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "eos-shard-writer.h"
+#include "eos-shard-writer-v1.h"
 
 #include <fcntl.h>
 #include <string.h>
@@ -34,7 +34,7 @@ static off_t lalign(int fd)
   return off;
 }
 
-struct eos_shard_writer_blob_entry
+struct eos_shard_writer_v1_blob_entry
 {
   GFile *file;
   char *content_type;
@@ -45,102 +45,102 @@ struct eos_shard_writer_blob_entry
   uint64_t uncompressed_size;
 };
 
-struct eos_shard_writer_record_entry
+struct eos_shard_writer_v1_record_entry
 {
   uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
-  struct eos_shard_writer_blob_entry metadata;
-  struct eos_shard_writer_blob_entry data;
+  struct eos_shard_writer_v1_blob_entry metadata;
+  struct eos_shard_writer_v1_blob_entry data;
 };
 
-struct _EosShardWriter
+struct _EosShardWriterV1
 {
   GObject parent;
 
   GArray *entries;
 };
 
-G_DEFINE_TYPE (EosShardWriter, eos_shard_writer, G_TYPE_OBJECT);
+G_DEFINE_TYPE (EosShardWriterV1, eos_shard_writer_v1, G_TYPE_OBJECT);
 
 static void
-eos_shard_writer_finalize (GObject *object)
+eos_shard_writer_v1_finalize (GObject *object)
 {
-  EosShardWriter *self = EOS_SHARD_WRITER (object);
+  EosShardWriterV1 *self = EOS_SHARD_WRITER_V1 (object);
   g_array_unref (self->entries);
-  G_OBJECT_CLASS (eos_shard_writer_parent_class)->finalize (object);
+  G_OBJECT_CLASS (eos_shard_writer_v1_parent_class)->finalize (object);
 }
 
 static void
-eos_shard_writer_blob_entry_clear (struct eos_shard_writer_blob_entry *blob)
+eos_shard_writer_v1_blob_entry_clear (struct eos_shard_writer_v1_blob_entry *blob)
 {
   g_clear_object (&blob->file);
   g_free (blob->content_type);
 }
 
 static void
-eos_shard_writer_record_entry_clear (struct eos_shard_writer_record_entry *entry)
+eos_shard_writer_v1_record_entry_clear (struct eos_shard_writer_v1_record_entry *entry)
 {
-  eos_shard_writer_blob_entry_clear (&entry->metadata);
-  eos_shard_writer_blob_entry_clear (&entry->data);
+  eos_shard_writer_v1_blob_entry_clear (&entry->metadata);
+  eos_shard_writer_v1_blob_entry_clear (&entry->data);
 }
 
 static void
-eos_shard_writer_class_init (EosShardWriterClass *klass)
+eos_shard_writer_v1_class_init (EosShardWriterV1Class *klass)
 {
   GObjectClass *gobject_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
-  gobject_class->finalize = eos_shard_writer_finalize;
+  gobject_class->finalize = eos_shard_writer_v1_finalize;
 }
 
 static void
-eos_shard_writer_init (EosShardWriter *self)
+eos_shard_writer_v1_init (EosShardWriterV1 *self)
 {
-  self->entries = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_record_entry));
-  g_array_set_clear_func (self->entries, (GDestroyNotify) eos_shard_writer_record_entry_clear);
+  self->entries = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v1_record_entry));
+  g_array_set_clear_func (self->entries, (GDestroyNotify) eos_shard_writer_v1_record_entry_clear);
 }
 
 static void
-blob_entry_init (struct eos_shard_writer_blob_entry *blob)
+blob_entry_init (struct eos_shard_writer_v1_blob_entry *blob)
 {
   blob->content_type = g_strdup ("");
 }
 
 static void
-record_entry_init (struct eos_shard_writer_record_entry *record)
+record_entry_init (struct eos_shard_writer_v1_record_entry *record)
 {
   blob_entry_init (&record->metadata);
   blob_entry_init (&record->data);
 }
 
 /**
- * eos_shard_writer_add_record:
- * @self: an #EosShardWriter
+ * eos_shard_writer_v1_add_record:
+ * @self: an #EosShardWriterV1
  * @hex_name: the hexadecimal string which will act as this entry's ID
  *
  * Adds a data/metadata file pair to the shard file. Once all pairs have been
- * added, call eos_shard_writer_write() to save the shard file to disk.
+ * added, call eos_shard_writer_v1_write() to save the shard file to disk.
  *
  * To set the individual fields of the blobs within the record,
- * use eos_shard_writer_add_blob().
+ * use eos_shard_writer_v1_add_blob().
  */
 void
-eos_shard_writer_add_record (EosShardWriter *self,
-                             char *hex_name)
+eos_shard_writer_v1_add_record (EosShardWriterV1 *self,
+                                char *hex_name)
 {
-  struct eos_shard_writer_record_entry record_entry = {};
+  struct eos_shard_writer_v1_record_entry record_entry = {};
   eos_shard_util_hex_name_to_raw_name (record_entry.raw_name, hex_name);
   record_entry_init (&record_entry);
   g_array_append_val (self->entries, record_entry);
 }
 
-static struct eos_shard_writer_blob_entry *
-get_blob_entry (struct eos_shard_writer_record_entry *e,
-                EosShardWriterBlob which_blob)
+static struct eos_shard_writer_v1_blob_entry *
+get_blob_entry (struct eos_shard_writer_v1_record_entry *e,
+                EosShardWriterV1Blob which_blob)
 {
   switch (which_blob) {
-  case EOS_SHARD_WRITER_BLOB_METADATA:
+  case EOS_SHARD_WRITER_V1_BLOB_METADATA:
     return &e->metadata;
-  case EOS_SHARD_WRITER_BLOB_DATA:
+  case EOS_SHARD_WRITER_V1_BLOB_DATA:
     return &e->data;
   default:
     g_assert_not_reached ();
@@ -148,25 +148,25 @@ get_blob_entry (struct eos_shard_writer_record_entry *e,
 }
 
 /**
- * eos_shard_writer_add_blob:
- * @self: an #EosShardWriter
+ * eos_shard_writer_v1_add_blob:
+ * @self: an #EosShardWriterV1
  * @which_blob: Which blob in the record
  * @file: a file of contents to write into the shard
  * @content_type: (nullable): the content-type of the file. Pass %NULL to auto-detect.
  * @flags: flags about how the data should be stored in the file
  *
  * Set the data for a blob entry in the last added record in the file.
- * Records can be added to the file with eos_shard_writer_add_record().
+ * Records can be added to the file with eos_shard_writer_v1_add_record().
  */
 void
-eos_shard_writer_add_blob (EosShardWriter *self,
-                           EosShardWriterBlob which_blob,
-                           GFile *file,
-                           const char *content_type,
-                           EosShardBlobFlags flags)
+eos_shard_writer_v1_add_blob (EosShardWriterV1 *self,
+                              EosShardWriterV1Blob which_blob,
+                              GFile *file,
+                              const char *content_type,
+                              EosShardBlobFlags flags)
 {
-  struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, self->entries->len - 1);
-  struct eos_shard_writer_blob_entry *b = get_blob_entry (e, which_blob);
+  struct eos_shard_writer_v1_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_v1_record_entry, self->entries->len - 1);
+  struct eos_shard_writer_v1_blob_entry *b = get_blob_entry (e, which_blob);
 
   b->file = g_object_ref (file);
   b->flags = flags;
@@ -180,7 +180,7 @@ eos_shard_writer_add_blob (EosShardWriter *self,
 }
 
 static void
-write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
+write_blob (int fd, struct eos_shard_writer_v1_blob_entry *blob)
 {
   g_autoptr(GError) error = NULL;
 
@@ -221,7 +221,7 @@ write_blob (int fd, struct eos_shard_writer_blob_entry *blob)
 }
 
 static GVariant *
-blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
+blob_entry_variant (struct eos_shard_writer_v1_blob_entry *blob)
 {
   return g_variant_new ("(s@ayuttt)",
                         blob->content_type,
@@ -234,9 +234,9 @@ blob_entry_variant (struct eos_shard_writer_blob_entry *blob)
 }
 
 static GVariant *
-record_entry_variant (struct eos_shard_writer_record_entry *entry)
+record_entry_variant (struct eos_shard_writer_v1_record_entry *entry)
 {
-  return g_variant_new ("(@ay@" EOS_SHARD_BLOB_ENTRY "@" EOS_SHARD_BLOB_ENTRY ")",
+  return g_variant_new ("(@ay@" EOS_SHARD_V1_BLOB_ENTRY "@" EOS_SHARD_V1_BLOB_ENTRY ")",
                         g_variant_new_fixed_array (G_VARIANT_TYPE ("y"), entry->raw_name,
                                                    sizeof (entry->raw_name), sizeof (*entry->raw_name)),
                         blob_entry_variant (&entry->metadata),
@@ -248,16 +248,16 @@ header_entry_variant (GArray *entries)
 {
   GVariantBuilder builder;
 
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a" EOS_SHARD_RECORD_ENTRY));
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a" EOS_SHARD_V1_RECORD_ENTRY));
 
   int i;
   for (i = 0; i < entries->len; i++) {
-    struct eos_shard_writer_record_entry *e = &g_array_index (entries, struct eos_shard_writer_record_entry, i);
-    g_variant_builder_add (&builder, "@" EOS_SHARD_RECORD_ENTRY, record_entry_variant (e));
+    struct eos_shard_writer_v1_record_entry *e = &g_array_index (entries, struct eos_shard_writer_v1_record_entry, i);
+    g_variant_builder_add (&builder, "@" EOS_SHARD_V1_RECORD_ENTRY, record_entry_variant (e));
   }
 
-  return g_variant_new (EOS_SHARD_HEADER_ENTRY,
-                        EOS_SHARD_MAGIC,
+  return g_variant_new (EOS_SHARD_V1_HEADER_ENTRY,
+                        EOS_SHARD_V1_MAGIC,
                         &builder);
 }
 
@@ -272,14 +272,14 @@ write_variant (int fd, GVariant *variant)
 static gint
 compare_records (gconstpointer a, gconstpointer b)
 {
-  struct eos_shard_writer_record_entry *r_a, *r_b;
-  r_a = (struct eos_shard_writer_record_entry*) a;
-  r_b = (struct eos_shard_writer_record_entry*) b;
+  struct eos_shard_writer_v1_record_entry *r_a, *r_b;
+  r_a = (struct eos_shard_writer_v1_record_entry*) a;
+  r_b = (struct eos_shard_writer_v1_record_entry*) b;
   return memcmp (r_a->raw_name, r_b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
 void
-eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
+eos_shard_writer_v1_write_to_fd (EosShardWriterV1 *self, int fd)
 {
   GVariant *variant;
 
@@ -295,7 +295,7 @@ eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
 
   int i;
   for (i = 0; i < self->entries->len; i++) {
-    struct eos_shard_writer_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_record_entry, i);
+    struct eos_shard_writer_v1_record_entry *e = &g_array_index (self->entries, struct eos_shard_writer_v1_record_entry, i);
 
     write_blob (fd, &e->metadata);
     write_blob (fd, &e->data);
@@ -309,17 +309,17 @@ eos_shard_writer_write_to_fd (EosShardWriter *self, int fd)
 }
 
 /**
- * eos_shard_writer_write:
- * @self: An #EosShardWriter
+ * eos_shard_writer_v1_write:
+ * @self: An #EosShardWriterV1
  * @path: The file path to write the shard to.
  *
  * This finalizes the shard and writes the contents to the file path
  * specified. Meant as the final step in compiling a shard file together.
  */
 void
-eos_shard_writer_write (EosShardWriter *self, char *path)
+eos_shard_writer_v1_write (EosShardWriterV1 *self, char *path)
 {
   int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  eos_shard_writer_write_to_fd (self, fd);
+  eos_shard_writer_v1_write_to_fd (self, fd);
   close (fd);
 }
