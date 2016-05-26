@@ -17,19 +17,19 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <gio/gio.h>
+#ifndef EOS_SHARD_SHARD_FILE_IMPL_V1_H
+#define EOS_SHARD_SHARD_FILE_IMPL_V1_H
 
 #include "eos-shard-types.h"
+#include "eos-shard-shard-file-impl.h"
 
-/**
- * EosShardBlobStream:
- *
- * A #GInputStream to an #EosShardBlob's content.
- */
+#define EOS_SHARD_TYPE_SHARD_FILE_IMPL_V1 (eos_shard_shard_file_impl_v1_get_type ())
+G_DECLARE_FINAL_TYPE (EosShardShardFileImplV1, eos_shard_shard_file_impl_v1, EOS_SHARD, SHARD_FILE_IMPL_V1, GObject)
 
-#define EOS_SHARD_TYPE_BLOB_STREAM (eos_shard_blob_stream_get_type ())
-G_DECLARE_FINAL_TYPE (EosShardBlobStream, eos_shard_blob_stream, EOS_SHARD, BLOB_STREAM, GInputStream)
+EosShardShardFileImpl *
+_eos_shard_shard_file_impl_v1_new (EosShardShardFile *self,
+                                   int fd,
+                                   GError **error);
 
-EosShardBlobStream * _eos_shard_blob_stream_new_for_blob (EosShardBlob *blob, EosShardShardFile *shard_file);
+#endif /* EOS_SHARD_SHARD_FILE_IMPL_V1_H */
+

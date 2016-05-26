@@ -24,7 +24,12 @@
 
 #include "eos-shard-types.h"
 #include "eos-shard-blob-stream.h"
-#include "eos-shard-format.h"
+
+typedef enum
+{
+  EOS_SHARD_BLOB_FLAG_NONE,
+  EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB,
+} EosShardBlobFlags;
 
 /**
  * EosShardBlob:
@@ -44,15 +49,18 @@ struct _EosShardBlob {
   int ref_count;
   EosShardShardFile *shard_file;
 
-  const char *content_type;
+  char *content_type;
   EosShardBlobFlags flags;
-  const uint8_t *checksum;
+  uint8_t checksum[0x20];
   uint64_t offs;
   uint64_t size;
   uint64_t uncompressed_size;
 };
 
 const char * eos_shard_blob_get_content_type (EosShardBlob *blob);
+
+EosShardBlob * _eos_shard_blob_new (void);
+
 GBytes * eos_shard_blob_load_contents (EosShardBlob  *blob,
                                        GError       **error);
 GInputStream * eos_shard_blob_get_stream (EosShardBlob *blob);
@@ -61,8 +69,9 @@ gsize eos_shard_blob_get_content_size (EosShardBlob *blob);
 EosShardBlob * eos_shard_blob_ref (EosShardBlob *blob);
 void eos_shard_blob_unref (EosShardBlob *blob);
 
-EosShardBlob * _eos_shard_blob_new_for_variant (EosShardShardFile *shard_file, GVariant *blob_variant);
 gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
 goffset eos_shard_blob_get_offset (EosShardBlob *blob);
 
 EosShardDictionary * eos_shard_blob_load_as_dictionary (EosShardBlob *blob, GError **error);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (EosShardBlob, eos_shard_blob_unref)

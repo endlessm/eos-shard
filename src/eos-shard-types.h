@@ -20,6 +20,7 @@
 #pragma once
 
 typedef struct _EosShardShardFile EosShardShardFile;
+typedef struct _EosShardShardFileImpl EosShardShardFileImpl;
 typedef struct _EosShardRecord EosShardRecord;
 typedef struct _EosShardBlob EosShardBlob;
 typedef struct _EosShardBlobStream EosShardBlobStream;
