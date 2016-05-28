@@ -1,3 +1,9 @@
+eos-shard (1.4 unstable; urgency=medium
+
+  * Update for API/ABI breakages.
+
+ -- Jasper St. Pierre <jstpierre@mecheye.net>  Sat, 28 May 2016 15:28:56 -0800
+
 eos-shard (1.3) unstable; urgency=medium
 
   * Update shard with Dictionary lookup mechanism.
