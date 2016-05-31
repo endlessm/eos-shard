@@ -82,7 +82,8 @@ _eos_shard_shard_file_impl_v2_new (EosShardShardFile *shard_file,
   self->fd = fd;
   self->shard_file = shard_file;
 
-  read (self->fd, &self->hdr, sizeof (self->hdr));
+  if (read (self->fd, &self->hdr, sizeof (self->hdr)) != sizeof (self->hdr))
+    goto error;
 
   if (memcmp (self->hdr.magic, EOS_SHARD_V2_MAGIC, sizeof (self->hdr.magic)) != 0)
     goto error;
