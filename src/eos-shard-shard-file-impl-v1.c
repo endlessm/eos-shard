@@ -131,7 +131,7 @@ blob_new_for_variant (EosShardShardFile *shard_file,
 static EosShardRecord *
 record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
 {
-  EosShardRecord *record = _eos_shard_record_new ();
+  g_autoptr(EosShardRecord) record = _eos_shard_record_new ();
   g_autoptr(GVariant) raw_name_variant;
   g_autoptr(GVariant) metadata_variant;
   g_autoptr(GVariant) data_variant;
@@ -145,22 +145,18 @@ record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
                  &data_variant);
   raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
   if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
-    goto corrupt;
+    return NULL;
 
   record->raw_name = raw_name;
   record->metadata = blob_new_for_variant (shard_file, metadata_variant);
   if (!record->metadata)
-    goto corrupt;
+    return NULL;
 
   record->data = blob_new_for_variant (shard_file, data_variant);
   if (!record->data)
-    goto corrupt;
+    return NULL;
 
-  return record;
-
- corrupt:
-  eos_shard_record_unref (record);
-  return NULL;
+  return g_steal_pointer (&record);
 }
 
 typedef struct {
