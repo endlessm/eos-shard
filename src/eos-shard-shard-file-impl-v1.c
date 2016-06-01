@@ -105,10 +105,10 @@ _eos_shard_shard_file_impl_v1_new (EosShardShardFile *shard_file,
 }
 
 static EosShardBlob *
-blob_new_for_variant (EosShardShardFile           *shard_file,
-                      GVariant                    *blob_variant)
+blob_new_for_variant (EosShardShardFile *shard_file,
+                      GVariant          *blob_variant)
 {
-  EosShardBlob *blob = _eos_shard_blob_new ();
+  g_autoptr(EosShardBlob) blob = _eos_shard_blob_new ();
   g_autoptr(GVariant) checksum_variant;
   size_t n_elts;
   const void *checksum;
@@ -125,7 +125,7 @@ blob_new_for_variant (EosShardShardFile           *shard_file,
   if (n_elts != 32)
     return NULL;
   memcpy (blob->checksum, checksum, sizeof (blob->checksum));
-  return blob;
+  return g_steal_pointer (&blob);
 }
 
 static EosShardRecord *
