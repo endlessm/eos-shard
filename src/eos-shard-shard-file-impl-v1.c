@@ -121,6 +121,8 @@ blob_new_for_variant (EosShardShardFile *shard_file,
                  &blob->offs,
                  &blob->size,
                  &blob->uncompressed_size);
+  if (!blob->offs)
+    return NULL;
   checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
   if (n_elts != 32)
     return NULL;
@@ -149,13 +151,7 @@ record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
 
   record->raw_name = raw_name;
   record->metadata = blob_new_for_variant (shard_file, metadata_variant);
-  if (!record->metadata)
-    return NULL;
-
   record->data = blob_new_for_variant (shard_file, data_variant);
-  if (!record->data)
-    return NULL;
-
   return g_steal_pointer (&record);
 }
 

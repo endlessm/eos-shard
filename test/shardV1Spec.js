@@ -249,10 +249,8 @@ describe('ShardV1', function () {
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
-            let metadata_bytes = record.metadata.load_contents();
-            expect(metadata_bytes).toBeNull();
-            let metadata_stream = record.metadata.get_stream();
-            expect(metadata_stream).toBeNull();
+            expect(record.metadata).toBeNull();
+            expect(record.data).not.toBeNull();
             let data_bytes = record.data.load_contents();
             expect(data_bytes).not.toBeNull();
             let data = data_bytes.get_data().toString();
@@ -274,16 +272,14 @@ describe('ShardV1', function () {
             shard_file.init(null);
 
             let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+            expect(record.metadata).not.toBeNull();
+            expect(record.data).toBeNull();
             let metadata_bytes = record.metadata.load_contents();
             expect(metadata_bytes).not.toBeNull();
             let metadata = metadata_bytes.get_data().toString();
             expect(metadata).toMatch(/eggs/);
             let metadata_stream = record.metadata.get_stream();
             expect(metadata_stream).not.toBeNull();
-            let data_bytes = record.data.load_contents();
-            expect(data_bytes).toBeNull();
-            let data_stream = record.data.get_stream();
-            expect(data_stream).toBeNull();
         });
     });
 
