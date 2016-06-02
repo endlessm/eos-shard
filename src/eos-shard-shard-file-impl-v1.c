@@ -105,10 +105,10 @@ _eos_shard_shard_file_impl_v1_new (EosShardShardFile *shard_file,
 }
 
 static EosShardBlob *
-blob_new_for_variant (EosShardShardFile           *shard_file,
-                      GVariant                    *blob_variant)
+blob_new_for_variant (EosShardShardFile *shard_file,
+                      GVariant          *blob_variant)
 {
-  EosShardBlob *blob = _eos_shard_blob_new ();
+  g_autoptr(EosShardBlob) blob = _eos_shard_blob_new ();
   g_autoptr(GVariant) checksum_variant;
   size_t n_elts;
   const void *checksum;
@@ -121,17 +121,19 @@ blob_new_for_variant (EosShardShardFile           *shard_file,
                  &blob->offs,
                  &blob->size,
                  &blob->uncompressed_size);
+  if (!blob->offs)
+    return NULL;
   checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
   if (n_elts != 32)
     return NULL;
   memcpy (blob->checksum, checksum, sizeof (blob->checksum));
-  return blob;
+  return g_steal_pointer (&blob);
 }
 
 static EosShardRecord *
 record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
 {
-  EosShardRecord *record = _eos_shard_record_new ();
+  g_autoptr(EosShardRecord) record = _eos_shard_record_new ();
   g_autoptr(GVariant) raw_name_variant;
   g_autoptr(GVariant) metadata_variant;
   g_autoptr(GVariant) data_variant;
@@ -145,22 +147,12 @@ record_new_for_variant (EosShardShardFile *shard_file, GVariant *record_variant)
                  &data_variant);
   raw_name = g_variant_get_fixed_array (raw_name_variant, &n_elts, 1);
   if (n_elts != EOS_SHARD_RAW_NAME_SIZE)
-    goto corrupt;
+    return NULL;
 
   record->raw_name = raw_name;
   record->metadata = blob_new_for_variant (shard_file, metadata_variant);
-  if (!record->metadata)
-    goto corrupt;
-
   record->data = blob_new_for_variant (shard_file, data_variant);
-  if (!record->data)
-    goto corrupt;
-
-  return record;
-
- corrupt:
-  eos_shard_record_unref (record);
-  return NULL;
+  return g_steal_pointer (&record);
 }
 
 typedef struct {
