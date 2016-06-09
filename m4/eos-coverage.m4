@@ -244,7 +244,7 @@ eos-collect-coverage: $(_eos_collect_coverage_targets)
 # the source or build directory and wants to keep
 # coverage reports for some later use.
 clean-coverage: $(_eos_clean_coverage_targets)
-	rm -rf $(EOS_DEFAULT_COVERAGE_DIR)
+	-rm -rf $(EOS_DEFAULT_COVERAGE_DIR)
 '
 
     EOS_COVERAGE_RULES_TARGETS_DISABLED='
@@ -389,11 +389,11 @@ eos-c-coverage:
 	mkdir -p $(_eos_c_coverage_trace_path)
 	$(LCOV) --compat-libtool --capture --directory $(abs_top_builddir) -o $(_eos_c_coverage_data_output_tmp_file)
 	$(LCOV) --extract $(_eos_c_coverage_data_output_tmp_file) "$(_eos_normalized_top_srcdir)/*" -o $(_eos_c_coverage_data_output_file)
-	rm -rf $(_eos_c_coverage_data_output_tmp_file)
+	-rm -rf $(_eos_c_coverage_data_output_tmp_file)
 
 eos-clean-c-coverage:
-	find $(abs_top_builddir) -name "*.gcda" -delete
-	find $(abs_top_builddir) -name "*.gcno" -delete
+	-find $(abs_top_builddir) -name "*.gcda" -delete
+	-find $(abs_top_builddir) -name "*.gcno" -delete
 
 _eos_collect_coverage_targets += eos-c-coverage
 _eos_clean_coverage_targets += eos-clean-c-coverage
