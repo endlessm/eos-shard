@@ -21,6 +21,8 @@
 
 #include <fcntl.h>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "eos-shard-shard-file.h"
 #include "eos-shard-format-v2.h"
@@ -281,7 +283,7 @@ write_blob (EosShardWriterV2 *self, int fd, struct eos_shard_writer_v2_blob_entr
   sblob.flags = blob->flags;
 
   blob->offs = lseek (fd, 0, SEEK_CUR);
-  int data_offs = ALIGN (blob->offs + sizeof (sblob));
+  off_t data_offs = ALIGN (blob->offs + sizeof (sblob));
   lseek (fd, data_offs, SEEK_SET);
 
   /* Make room for the blob entry. */
@@ -303,7 +305,7 @@ write_blob (EosShardWriterV2 *self, int fd, struct eos_shard_writer_v2_blob_entr
   sblob.data_start = data_offs;
 
   /* Go back and patch our blob header... */
-  int old_pos = lseek (fd, 0, SEEK_CUR);
+  off_t old_pos = lseek (fd, 0, SEEK_CUR);
   lseek (fd, blob->offs, SEEK_SET);
   g_assert (write (fd, &sblob, sizeof (sblob)) >= 0);
   lseek (fd, old_pos, SEEK_SET);

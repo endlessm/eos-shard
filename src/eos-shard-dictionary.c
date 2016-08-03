@@ -34,14 +34,14 @@ typedef struct _EosShardDictionary {
   int ref_count;
 
   int fd;
-  int offset;
+  goffset offset;
   struct dictionary_header header;
 
   struct bloom_filter _bloom_filter, *bloom_filter;
 } EosShardDictionary;
 
 static gboolean
-dictionary_open (struct dictionary_header *header, int fd, int offset)
+dictionary_open (struct dictionary_header *header, int fd, goffset offset)
 {
   ssize_t len = pread (fd, header, sizeof (*header), offset);
 
@@ -233,7 +233,7 @@ eos_shard_dictionary_unref (EosShardDictionary *dictionary)
 }
 
 static char *
-read_cstring (int fd, int offset)
+read_cstring (int fd, off_t offset)
 {
   GString *string = g_string_new (NULL);
   ssize_t len;
