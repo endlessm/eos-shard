@@ -1,3 +1,9 @@
+eos-shard (1.6) unstable; urgency=medium
+
+  * Support for 64 bit machines
+
+ -- Jasper St. Pierre <jstpierre@mecheye.net>  Wed, 3 Aug 2016 15:28:56 -0800
+
 eos-shard (1.5) unstable; urgency=medium
 
   * Bump again to try and get it building.
