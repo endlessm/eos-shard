@@ -17,8 +17,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-/* for memmem */
-#define _GNU_SOURCE
+#include "config.h"
 
 #include "eos-shard-shard-file.h"
 

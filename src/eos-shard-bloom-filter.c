@@ -17,6 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include "eos-shard-bloom-filter.h"
 #include "eos-shard-enums.h"
 

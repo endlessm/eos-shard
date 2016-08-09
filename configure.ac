@@ -65,6 +65,7 @@ AC_PROG_AWK
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
 AC_SYS_LARGEFILE
+AC_GNU_SOURCE
 
 LT_INIT
 
@@ -82,4 +83,5 @@ AC_CONFIG_FILES([
     eos-shard-$SHARD_API_VERSION.pc:eos-shard.pc.in
     Makefile
 ], [], [SHARD_API_VERSION='$SHARD_API_VERSION'])
+AC_CONFIG_HEADERS([config.h])
 AC_OUTPUT
