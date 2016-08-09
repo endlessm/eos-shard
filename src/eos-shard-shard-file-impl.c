@@ -17,6 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include "eos-shard-shard-file-impl.h"
 
 G_DEFINE_INTERFACE (EosShardShardFileImpl, eos_shard_shard_file_impl, G_TYPE_OBJECT);

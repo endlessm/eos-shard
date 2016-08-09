@@ -17,6 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include "eos-shard-dictionary-writer.h"
 
 #include <math.h>

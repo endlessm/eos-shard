@@ -17,6 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include "eos-shard-blob.h"
 #include "eos-shard-shard-file.h"
 

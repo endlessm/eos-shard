@@ -17,6 +17,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include "eos-shard-writer-v2.h"
 
 #include <fcntl.h>
