@@ -21,15 +21,23 @@
 
 #include "eos-shard-writer-v2.h"
 
+#ifdef HAVE_FALLOCATE
+#include <linux/falloc.h>
+#endif
+
 #include <fcntl.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "eos-shard-shard-file.h"
 #include "eos-shard-format-v2.h"
 
-#define ALIGN(n) (((n) + 0x1f) & ~0x1f)
+/* Rounds up n to the nearest m -- m must be a power of two. */
+#define _ALIGN(n, m) (((n) + ((m)-1)) & ~((m)-1))
+
+#define ALIGN(n) _ALIGN(n, 0x20)
 
 struct eos_shard_writer_v2_blob_entry
 {
@@ -253,7 +261,7 @@ struct write_context
 };
 
 static void
-write_blob (struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *blob)
+write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
 {
   /* If we don't have any file, that's normal... */
   if (!blob->file)
@@ -280,29 +288,24 @@ write_blob (struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *bl
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  blob->offs = ctx->offset;
-
   off_t data_start = ALIGN (blob->offs + sizeof (blob->sblob));
-  ctx->offset = data_start;
+  off_t offset = data_start;
 
   uint8_t buf[4096*4];
-  int size, total_size = 0;
+  int size;
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
   while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
-    g_assert (pwrite (ctx->fd, buf, size, ctx->offset) >= 0);
+    g_assert (pwrite (fd, buf, size, offset) >= 0);
     g_checksum_update (checksum, buf, size);
-    total_size += size;
-    ctx->offset += size;
+    offset += size;
   }
+
   size_t checksum_buf_len = sizeof (blob->sblob.csum);
   g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (blob->sblob.csum));
 
   blob->sblob.data_start = data_start;
-  blob->sblob.size = total_size;
-
-  /* Go back and patch our blob header... */
-  g_assert (pwrite (ctx->fd, &blob->sblob, sizeof (blob->sblob), blob->offs) >= 0);
+  blob->sblob.size = (offset - data_start);
 }
 
 static gint
@@ -355,6 +358,122 @@ compare_records (gconstpointer a, gconstpointer b)
   return memcmp (r_a->raw_name, r_b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
+#ifdef HAVE_FALLOCATE
+
+/* This is the fancy algorithm we use on Linux that can be multi-threaded. */
+
+static gboolean
+blob_is_compressed (struct eos_shard_writer_v2_blob_entry *blob)
+{
+  return (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB);
+}
+
+static void
+write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
+{
+  int i;
+
+  off_t offset = ctx->offset;
+
+  struct stat stbuf;
+  fstat (ctx->fd, &stbuf);
+
+  size_t blksize = stbuf.st_blksize;
+
+#define BLOB_ALIGN(n) (_ALIGN(n, blksize))
+
+  /* Writing blob data is a bit tricksy, since we use several methods for speed.
+   * First, we write out all blobs which are not "CPU intensive" in a serial manner. */
+
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+
+    if (blob_is_compressed (b))
+      continue;
+
+    b->offs = offset = ALIGN (offset);
+    offset += sizeof (b->sblob) + b->sblob.uncompressed_size;
+  }
+
+  /* Next, we schedule the position for each blob that is CPU intensive using its
+   * *uncompressed data size*, but page aligned. After that, do the CPU-intensive work
+   * in parallel at the recommended offsets. After that, if supported, we throw out
+   * the pages we don't care about and adjust the data offsets... */
+
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+
+    if (!blob_is_compressed (b))
+      continue;
+
+    b->offs = offset = BLOB_ALIGN (offset);
+    offset += sizeof (b->sblob) + b->sblob.uncompressed_size;
+  }
+
+  /* Write in parallel...
+   * XXX: Actually make parallel. */
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    write_blob (ctx->fd, b);
+  }
+
+  uint64_t blob_offset_delta = 0;
+
+  /* Go through and remove unused chunks from each blob. */
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+
+    b->offs -= blob_offset_delta;
+    b->sblob.data_start -= blob_offset_delta;
+
+    uint64_t uncompressed_data_end = BLOB_ALIGN (b->offs + b->sblob.uncompressed_size);
+    uint64_t compressed_data_end = BLOB_ALIGN (b->offs + b->sblob.size);
+
+    uint64_t remove_range_start = compressed_data_end;
+    uint64_t remove_range_length = uncompressed_data_end - compressed_data_end;
+
+    if (remove_range_length > 0) {
+      /* If we're the last blob, then the zeroes probably haven't been written out to disk -- let's just stomp over them. */
+      gboolean is_last_blob = (i == self->blobs->len - 1);
+
+      if (is_last_blob || fallocate (ctx->fd, FALLOC_FL_COLLAPSE_RANGE, remove_range_start, remove_range_length) == 0) {
+        /* We successfully collapsed this range. Adjust blob offsets from this point forward. */
+        blob_offset_delta += remove_range_length;
+      }
+    }
+  }
+
+  offset -= blob_offset_delta;
+
+  /* Now go through and write out blob headers. */
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
+  }
+
+  ctx->offset = BLOB_ALIGN (offset);
+
+#undef BLOB_ALIGN
+}
+
+#else
+
+static void
+write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
+{
+  int i;
+
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+
+    b->offs = ALIGN (ctx->offset);
+    write_blob (ctx->fd, b);
+    ctx->offset += b->sblob.size;
+  }
+}
+
+#endif /* HAVE_FALLOCATE */
+
 void
 eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
 {
@@ -375,13 +494,7 @@ eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
 
   ctx->offset = sizeof (hdr);
 
-  /* First, do data... */
-
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
-    write_blob (ctx, b);
-  }
-
+  write_blobs (self, ctx);
   ctx->offset = ALIGN (ctx->offset);
 
   /* Now write out blob tables... */
