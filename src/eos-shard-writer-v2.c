@@ -31,14 +31,6 @@
 
 #define ALIGN(n) (((n) + 0x1f) & ~0x1f)
 
-static off_t lalign(int fd)
-{
-  off_t off = lseek (fd, 0, SEEK_CUR);
-  off = ALIGN (off);
-  lseek (fd, off, SEEK_SET);
-  return off;
-}
-
 struct eos_shard_writer_v2_blob_entry
 {
   GFile *file;
@@ -111,12 +103,14 @@ constant_pool_add (struct constant_pool *cpool, const char *S)
 }
 
 static void
-constant_pool_write (struct constant_pool *cpool, int fd)
+constant_pool_write (struct constant_pool *cpool, int fd, off_t offset)
 {
   int i;
   for (i = 0; i < cpool->strings->len; i++) {
     char *key = g_ptr_array_index (cpool->strings, i);
-    g_assert (write (fd, key, CSTRING_SIZE (key)) >= 0);
+    size_t size = CSTRING_SIZE (key);
+    g_assert (pwrite (fd, key, size, offset) >= 0);
+    offset += size;
   }
 }
 
@@ -255,8 +249,14 @@ eos_shard_writer_v2_add_blob_to_record (EosShardWriterV2 *self,
   g_array_append_val (e->blobs, blob_id);
 }
 
+struct write_context
+{
+  int fd;
+  off_t offset;
+};
+
 static void
-write_blob (EosShardWriterV2 *self, int fd, struct eos_shard_writer_v2_blob_entry *blob)
+write_blob (EosShardWriterV2 *self, struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *blob)
 {
   /* If we don't have any file, that's normal... */
   if (!blob->file)
@@ -288,33 +288,30 @@ write_blob (EosShardWriterV2 *self, int fd, struct eos_shard_writer_v2_blob_entr
   sblob.content_type_offs = constant_pool_add (&self->cpool, blob->content_type);
   sblob.flags = blob->flags;
 
-  blob->offs = lseek (fd, 0, SEEK_CUR);
-  off_t data_offs = ALIGN (blob->offs + sizeof (sblob));
-  lseek (fd, data_offs, SEEK_SET);
+  blob->offs = ctx->offset;
 
-  /* Make room for the blob entry. */
+  off_t data_start = ALIGN (blob->offs + sizeof (sblob));
+  ctx->offset = data_start;
 
   uint8_t buf[4096*4];
   int size, total_size = 0;
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
   while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
-    g_assert (write (fd, buf, size) >= 0);
+    g_assert (pwrite (ctx->fd, buf, size, ctx->offset) >= 0);
     g_checksum_update (checksum, buf, size);
     total_size += size;
+    ctx->offset += size;
   }
   size_t checksum_buf_len = sizeof (sblob.csum);
   g_checksum_get_digest (checksum, sblob.csum, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (sblob.csum));
 
+  sblob.data_start = data_start;
   sblob.size = total_size;
   sblob.uncompressed_size = blob->uncompressed_size;
-  sblob.data_start = data_offs;
 
   /* Go back and patch our blob header... */
-  off_t old_pos = lseek (fd, 0, SEEK_CUR);
-  lseek (fd, blob->offs, SEEK_SET);
-  g_assert (write (fd, &sblob, sizeof (sblob)) >= 0);
-  lseek (fd, old_pos, SEEK_SET);
+  g_assert (pwrite (ctx->fd, &sblob, sizeof (sblob), blob->offs) >= 0);
 }
 
 static gint
@@ -331,9 +328,9 @@ compare_blob_table_entries (gconstpointer a, gconstpointer b, gpointer user_data
 }
 
 static void
-write_blob_table (EosShardWriterV2 *self, int fd, struct eos_shard_writer_v2_record_entry *e)
+write_blob_table (EosShardWriterV2 *self, struct write_context *ctx, struct eos_shard_writer_v2_record_entry *e)
 {
-  e->blob_table_start = lseek (fd, 0, SEEK_CUR);
+  e->blob_table_start = ctx->offset;
 
   g_array_sort_with_data (e->blobs, compare_blob_table_entries, self);
 
@@ -342,18 +339,20 @@ write_blob_table (EosShardWriterV2 *self, int fd, struct eos_shard_writer_v2_rec
     uint64_t blob_id = g_array_index (e->blobs, uint64_t, i);
     struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, blob_id);
     struct eos_shard_v2_record_blob_table_entry be = { .blob_start = b->offs };
-    g_assert (write (fd, &be, sizeof (be)) >= 0);
+    g_assert (pwrite (ctx->fd, &be, sizeof (be), ctx->offset) >= 0);
+    ctx->offset += sizeof (be);
   }
 }
 
 static void
-write_record (int fd, struct eos_shard_writer_v2_record_entry *e)
+write_record (struct write_context *ctx, struct eos_shard_writer_v2_record_entry *e)
 {
   struct eos_shard_v2_record srecord = {};
   memcpy (srecord.raw_name, e->raw_name, EOS_SHARD_RAW_NAME_SIZE);
   srecord.blob_table_start = e->blob_table_start;
   srecord.blob_table_length = e->blobs->len;
-  g_assert (write (fd, &srecord, sizeof (srecord)) >= 0);
+  g_assert (pwrite (ctx->fd, &srecord, sizeof (srecord), ctx->offset) >= 0);
+  ctx->offset += sizeof (srecord);
 }
 
 static gint
@@ -373,42 +372,45 @@ eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
   /* Sort our records to allow for binary searches on retrieval. */
   g_array_sort (self->records, &compare_records);
 
+  struct write_context _ctx = {
+    .fd = fd,
+  };
+  struct write_context *ctx = &_ctx;
+
   struct eos_shard_v2_hdr hdr = { };
 
   memcpy (hdr.magic, EOS_SHARD_V2_MAGIC, sizeof (hdr.magic));
   hdr.records_length = self->records->len;
 
-  /* We do this backwards so we can do it in one parse... */
-  lseek (fd, ALIGN (sizeof (hdr)), SEEK_SET);
+  ctx->offset = sizeof (hdr);
 
   /* First, do data... */
 
   for (i = 0; i < self->blobs->len; i++) {
     struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
-    write_blob (self, fd, b);
+    write_blob (self, ctx, b);
   }
 
-  lalign (fd);
+  ctx->offset = ALIGN (ctx->offset);
 
   /* Now write out blob tables... */
   for (i = 0; i < self->records->len; i++) {
     struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, i);
-    write_blob_table (self, fd, e);
+    write_blob_table (self, ctx, e);
   }
 
   /* Now for records... */
-  hdr.records_start = lalign (fd);
+  hdr.records_start = ctx->offset = ALIGN (ctx->offset);
   for (i = 0; i < self->records->len; i++) {
     struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, i);
-    write_record (fd, e);
+    write_record (ctx, e);
   }
 
   /* Now for the string constant table... */
-  hdr.string_constant_table_start = lalign (fd);
-  constant_pool_write (&self->cpool, fd);
+  hdr.string_constant_table_start = ALIGN (ctx->offset);
+  constant_pool_write (&self->cpool, ctx->fd, hdr.string_constant_table_start);
 
-  lseek (fd, 0, SEEK_SET);
-  g_assert (write (fd, &hdr, sizeof (hdr)) >= 0);
+  g_assert (pwrite (ctx->fd, &hdr, sizeof (hdr), 0) >= 0);
 }
 
 /**
