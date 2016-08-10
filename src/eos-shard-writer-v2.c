@@ -186,7 +186,7 @@ eos_shard_writer_v2_init (EosShardWriterV2 *self)
  * eos_shard_writer_v2_add_blob_to_record().
  */
 uint64_t
-eos_shard_writer_v2_add_blob (EosShardWriterV2    *self,
+eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
                               char              *name,
                               GFile             *file,
                               char              *content_type,
@@ -198,13 +198,17 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2    *self,
   b.flags = flags;
   b.name = g_strdup (name);
 
-  g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
-  b.uncompressed_size = g_file_info_get_size (info);
+  if (content_type != NULL) {
+    g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::size", 0, NULL, NULL);
+    b.uncompressed_size = g_file_info_get_size (info);
 
-  if (content_type != NULL)
     b.content_type = g_strdup (content_type);
-  else
+  } else {
+    g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::size,standard::content-type", 0, NULL, NULL);
+    b.uncompressed_size = g_file_info_get_size (info);
+
     b.content_type = g_strdup (g_file_info_get_content_type (info));
+  }
 
   g_return_val_if_fail (strlen (b.name) <= EOS_SHARD_V2_BLOB_MAX_NAME_SIZE, 0);
   g_return_val_if_fail (strlen (b.content_type) <= EOS_SHARD_V2_BLOB_MAX_CONTENT_TYPE_SIZE, 0);
