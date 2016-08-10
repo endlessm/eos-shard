@@ -320,7 +320,7 @@ compare_blob_table_entries (gconstpointer a, gconstpointer b, gpointer user_data
   EosShardWriterV2 *self = user_data;
 
   uint64_t idx_a = * (uint64_t *) a;
-  uint64_t idx_b = * (uint64_t *) a;
+  uint64_t idx_b = * (uint64_t *) b;
   struct eos_shard_writer_v2_blob_entry *blob_a, *blob_b;
   blob_a = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, idx_a);
   blob_b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, idx_b);
