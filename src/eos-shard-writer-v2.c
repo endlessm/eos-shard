@@ -35,12 +35,9 @@ struct eos_shard_writer_v2_blob_entry
 {
   GFile *file;
   char *name;
-  off_t name_offs;
-  off_t content_type_offs;
-  EosShardBlobFlags flags;
-
   off_t offs;
-  uint64_t uncompressed_size;
+
+  struct eos_shard_v2_blob sblob;
 };
 
 struct eos_shard_writer_v2_record_entry
@@ -190,7 +187,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_autoptr(GFileInfo) info = NULL;
 
   b.file = g_object_ref (file);
-  b.flags = flags;
+  b.name = g_strdup (name);
 
   if (content_type == NULL) {
     info = g_file_query_info (file, "standard::size,standard::content-type", 0, NULL, NULL);
@@ -202,10 +199,10 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_return_val_if_fail (strlen (name) <= EOS_SHARD_V2_BLOB_MAX_NAME_SIZE, 0);
   g_return_val_if_fail (strlen (content_type) <= EOS_SHARD_V2_BLOB_MAX_CONTENT_TYPE_SIZE, 0);
 
-  b.name = g_strdup (name);
-  b.name_offs = constant_pool_add (&self->cpool, name);
-  b.content_type_offs = constant_pool_add (&self->cpool, content_type);
-  b.uncompressed_size = g_file_info_get_size (info);
+  b.sblob.flags = flags;
+  b.sblob.name_offs = constant_pool_add (&self->cpool, name);
+  b.sblob.content_type_offs = constant_pool_add (&self->cpool, content_type);
+  b.sblob.uncompressed_size = g_file_info_get_size (info);
 
   g_array_append_val (self->blobs, b);
   int index = self->blobs->len - 1;
@@ -275,7 +272,7 @@ write_blob (struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *bl
 
   g_autoptr(GInputStream) stream;
 
-  if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
+  if (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
     stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
     g_object_unref (file_stream);
@@ -283,14 +280,9 @@ write_blob (struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *bl
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  struct eos_shard_v2_blob sblob = { };
-  sblob.name_offs = blob->name_offs;
-  sblob.content_type_offs = blob->content_type_offs;
-  sblob.flags = blob->flags;
-
   blob->offs = ctx->offset;
 
-  off_t data_start = ALIGN (blob->offs + sizeof (sblob));
+  off_t data_start = ALIGN (blob->offs + sizeof (blob->sblob));
   ctx->offset = data_start;
 
   uint8_t buf[4096*4];
@@ -302,16 +294,15 @@ write_blob (struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *bl
     total_size += size;
     ctx->offset += size;
   }
-  size_t checksum_buf_len = sizeof (sblob.csum);
-  g_checksum_get_digest (checksum, sblob.csum, &checksum_buf_len);
-  g_assert (checksum_buf_len == sizeof (sblob.csum));
+  size_t checksum_buf_len = sizeof (blob->sblob.csum);
+  g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
+  g_assert (checksum_buf_len == sizeof (blob->sblob.csum));
 
-  sblob.data_start = data_start;
-  sblob.size = total_size;
-  sblob.uncompressed_size = blob->uncompressed_size;
+  blob->sblob.data_start = data_start;
+  blob->sblob.size = total_size;
 
   /* Go back and patch our blob header... */
-  g_assert (pwrite (ctx->fd, &sblob, sizeof (sblob), blob->offs) >= 0);
+  g_assert (pwrite (ctx->fd, &blob->sblob, sizeof (blob->sblob), blob->offs) >= 0);
 }
 
 static gint
