@@ -35,7 +35,8 @@ struct eos_shard_writer_v2_blob_entry
 {
   GFile *file;
   char *name;
-  char *content_type;
+  off_t name_offs;
+  off_t content_type_offs;
   EosShardBlobFlags flags;
 
   off_t offs;
@@ -129,7 +130,6 @@ eos_shard_writer_v2_blob_entry_clear (struct eos_shard_writer_v2_blob_entry *blo
 {
   g_clear_object (&blob->file);
   g_free (blob->name);
-  g_free (blob->content_type);
 }
 
 static void
@@ -187,25 +187,25 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
                               EosShardBlobFlags  flags)
 {
   struct eos_shard_writer_v2_blob_entry b = {};
+  g_autoptr(GFileInfo) info = NULL;
 
   b.file = g_object_ref (file);
   b.flags = flags;
-  b.name = g_strdup (name);
 
-  if (content_type != NULL) {
-    g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::size", 0, NULL, NULL);
-    b.uncompressed_size = g_file_info_get_size (info);
-
-    b.content_type = g_strdup (content_type);
+  if (content_type == NULL) {
+    info = g_file_query_info (file, "standard::size,standard::content-type", 0, NULL, NULL);
+    content_type = (char *) g_file_info_get_content_type (info);
   } else {
-    g_autoptr(GFileInfo) info = g_file_query_info (file, "standard::size,standard::content-type", 0, NULL, NULL);
-    b.uncompressed_size = g_file_info_get_size (info);
-
-    b.content_type = g_strdup (g_file_info_get_content_type (info));
+    info = g_file_query_info (file, "standard::size", 0, NULL, NULL);
   }
 
-  g_return_val_if_fail (strlen (b.name) <= EOS_SHARD_V2_BLOB_MAX_NAME_SIZE, 0);
-  g_return_val_if_fail (strlen (b.content_type) <= EOS_SHARD_V2_BLOB_MAX_CONTENT_TYPE_SIZE, 0);
+  g_return_val_if_fail (strlen (name) <= EOS_SHARD_V2_BLOB_MAX_NAME_SIZE, 0);
+  g_return_val_if_fail (strlen (content_type) <= EOS_SHARD_V2_BLOB_MAX_CONTENT_TYPE_SIZE, 0);
+
+  b.name = g_strdup (name);
+  b.name_offs = constant_pool_add (&self->cpool, name);
+  b.content_type_offs = constant_pool_add (&self->cpool, content_type);
+  b.uncompressed_size = g_file_info_get_size (info);
 
   g_array_append_val (self->blobs, b);
   int index = self->blobs->len - 1;
@@ -256,7 +256,7 @@ struct write_context
 };
 
 static void
-write_blob (EosShardWriterV2 *self, struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *blob)
+write_blob (struct write_context *ctx, struct eos_shard_writer_v2_blob_entry *blob)
 {
   /* If we don't have any file, that's normal... */
   if (!blob->file)
@@ -284,8 +284,8 @@ write_blob (EosShardWriterV2 *self, struct write_context *ctx, struct eos_shard_
   }
 
   struct eos_shard_v2_blob sblob = { };
-  sblob.name_offs = constant_pool_add (&self->cpool, blob->name);
-  sblob.content_type_offs = constant_pool_add (&self->cpool, blob->content_type);
+  sblob.name_offs = blob->name_offs;
+  sblob.content_type_offs = blob->content_type_offs;
   sblob.flags = blob->flags;
 
   blob->offs = ctx->offset;
@@ -388,7 +388,7 @@ eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
 
   for (i = 0; i < self->blobs->len; i++) {
     struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
-    write_blob (self, ctx, b);
+    write_blob (ctx, b);
   }
 
   ctx->offset = ALIGN (ctx->offset);
