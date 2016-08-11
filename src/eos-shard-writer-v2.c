@@ -308,6 +308,37 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
   blob->sblob.size = (offset - data_start);
 }
 
+struct write_blob_thread_data
+{
+  int fd;
+  struct eos_shard_writer_v2_blob_entry *blob;
+};
+
+static void
+write_blob_thread (GTask *task,
+                   gpointer source_object,
+                   gpointer task_data,
+                   GCancellable *cancellable)
+{
+  struct write_blob_thread_data *data = task_data;
+  write_blob (data->fd, data->blob);
+  g_task_return_int (task, 0);
+}
+
+struct parallel_write_blob_data
+{
+  int n_left;
+};
+
+static void
+write_blob_callback (GObject      *source_object,
+                     GAsyncResult *result,
+                     gpointer      user_data)
+{
+  struct parallel_write_blob_data *data = user_data;
+  data->n_left--;
+}
+
 static gint
 compare_blob_table_entries (gconstpointer a, gconstpointer b, gpointer user_data)
 {
@@ -410,12 +441,27 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
     offset += sizeof (b->sblob) + b->sblob.uncompressed_size;
   }
 
-  /* Write in parallel...
-   * XXX: Actually make parallel. */
+  /* Write in parallel... */
+  GMainContext *context = g_main_context_new ();
+  g_main_context_push_thread_default (context);
+
+  struct parallel_write_blob_data parallel_data = {
+    .n_left = self->blobs->len,
+  };
+
   for (i = 0; i < self->blobs->len; i++) {
     struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
-    write_blob (ctx->fd, b);
+    struct write_blob_thread_data thread_data = { .fd = ctx->fd, .blob = b };
+    g_autoptr(GTask) task = g_task_new (NULL, NULL, write_blob_callback, &parallel_data);
+    g_task_set_task_data (task, g_memdup (&thread_data, sizeof (thread_data)), (GDestroyNotify) g_free);
+    g_task_run_in_thread (task, write_blob_thread);
   }
+
+  while (parallel_data.n_left > 0)
+    g_main_context_iteration (context, TRUE);
+
+  g_main_context_pop_thread_default (context);
+  g_main_context_unref (context);
 
   uint64_t blob_offset_delta = 0;
 
