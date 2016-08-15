@@ -26,6 +26,7 @@
 #endif
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -41,10 +42,8 @@
 
 struct eos_shard_writer_v2_blob_entry
 {
-  GFile *file;
   char *name;
   off_t offs;
-
   struct eos_shard_v2_blob sblob;
 };
 
@@ -63,9 +62,32 @@ struct constant_pool
   GPtrArray *strings;
 };
 
+struct write_context
+{
+  int fd;
+  off_t offset;
+  size_t blksize;
+};
+
+enum
+{
+  PROP_0,
+  PROP_FD,
+  LAST_PROP,
+};
+
+static GParamSpec *obj_props[LAST_PROP] = { NULL, };
+
 struct _EosShardWriterV2
 {
   GObject parent;
+
+  struct write_context ctx;
+
+  struct {
+    GMainContext *context;
+    int n_left;
+  } parallel_write_blob_data;
 
   GPtrArray *blobs;
   GArray *records;
@@ -127,13 +149,13 @@ eos_shard_writer_v2_finalize (GObject *object)
   constant_pool_dispose (&self->cpool);
   g_ptr_array_unref (self->blobs);
   g_array_unref (self->records);
+  g_clear_pointer (&self->parallel_write_blob_data.context, g_main_context_unref);
   G_OBJECT_CLASS (eos_shard_writer_v2_parent_class)->finalize (object);
 }
 
 static void
 eos_shard_writer_v2_blob_entry_free (struct eos_shard_writer_v2_blob_entry *blob)
 {
-  g_clear_object (&blob->file);
   g_free (blob->name);
   g_free (blob);
 }
@@ -151,12 +173,70 @@ eos_shard_writer_v2_record_entry_init (struct eos_shard_writer_v2_record_entry *
 }
 
 static void
+open_write_context (struct write_context *ctx, int fd)
+{
+  ctx->fd = fd;
+
+  struct stat stbuf;
+  fstat (ctx->fd, &stbuf);
+  ctx->blksize = stbuf.st_blksize;
+
+  ctx->offset = sizeof (struct eos_shard_v2_hdr);
+}
+
+static void
+eos_shard_writer_v2_set_property (GObject      *object,
+                                  guint         prop_id,
+                                  const GValue *value,
+                                  GParamSpec   *pspec)
+{
+  EosShardWriterV2 *self = EOS_SHARD_WRITER_V2 (object);
+
+  switch (prop_id) {
+  case PROP_FD:
+    open_write_context (&self->ctx, g_value_get_uint64 (value));
+    break;
+
+  default:
+    G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+  }
+}
+
+static void
+eos_shard_writer_v2_get_property (GObject    *object,
+                                  guint       prop_id,
+                                  GValue     *value,
+                                  GParamSpec *pspec)
+{
+  EosShardWriterV2 *self = EOS_SHARD_WRITER_V2 (object);
+
+  switch (prop_id) {
+  case PROP_FD:
+    g_value_set_uint64 (value, self->ctx.fd);
+    break;
+
+  default:
+    G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+  }
+}
+
+static void
 eos_shard_writer_v2_class_init (EosShardWriterV2Class *klass)
 {
   GObjectClass *gobject_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->finalize = eos_shard_writer_v2_finalize;
+  gobject_class->set_property = eos_shard_writer_v2_set_property;
+  gobject_class->get_property = eos_shard_writer_v2_get_property;
+
+  obj_props[PROP_FD] =
+    g_param_spec_uint64 ("fd", "", "", 0, G_MAXUINT64, 0,
+                         (GParamFlags) (G_PARAM_READWRITE |
+                                        G_PARAM_CONSTRUCT_ONLY |
+                                        G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_properties (gobject_class, LAST_PROP, obj_props);
 }
 
 static void
@@ -168,6 +248,114 @@ eos_shard_writer_v2_init (EosShardWriterV2 *self)
 
   self->records = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v2_record_entry));
   g_array_set_clear_func (self->records, (GDestroyNotify) eos_shard_writer_v2_record_entry_clear);
+
+  self->parallel_write_blob_data.context = g_main_context_new ();
+}
+
+/**
+ * eos_shard_writer_v2_new_for_fd:
+ *
+ * Returns: (transfer full):
+ */
+EosShardWriterV2 *
+eos_shard_writer_v2_new_for_fd (int fd)
+{
+  return EOS_SHARD_WRITER_V2 (g_object_new (EOS_SHARD_TYPE_WRITER_V2, "fd", fd, NULL));
+}
+
+static void
+write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
+{
+  g_autoptr(GError) error = NULL;
+
+  GFileInputStream *file_stream = g_file_read (file, NULL, &error);
+  if (!file_stream) {
+    g_error ("Could not read from %s: %s", g_file_get_path (file), error->message);
+    return;
+  }
+
+  g_autoptr(GInputStream) stream;
+
+  if (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
+    g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
+    stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
+    g_object_unref (file_stream);
+  } else {
+    stream = G_INPUT_STREAM (file_stream);
+  }
+
+  off_t data_start = blob->offs + sizeof (blob->sblob);
+  off_t offset = data_start;
+
+  uint8_t buf[4096*4];
+  int size;
+  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
+  while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
+    g_assert (pwrite (fd, buf, size, offset) >= 0);
+    g_checksum_update (checksum, buf, size);
+    offset += size;
+  }
+
+  size_t checksum_buf_len = sizeof (blob->sblob.csum);
+  g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
+  g_assert (checksum_buf_len == sizeof (blob->sblob.csum));
+
+  blob->sblob.data_start = data_start;
+  blob->sblob.size = (offset - data_start);
+}
+
+struct write_blob_thread_data
+{
+  int fd;
+  struct eos_shard_writer_v2_blob_entry *blob;
+  GFile *file;
+};
+
+static void
+write_blob_thread (GTask *task,
+                   gpointer source_object,
+                   gpointer task_data,
+                   GCancellable *cancellable)
+{
+  struct write_blob_thread_data *data = task_data;
+  write_blob (data->fd, data->blob, data->file);
+  g_task_return_int (task, 0);
+}
+
+static void
+write_blob_callback (GObject      *source_object,
+                     GAsyncResult *result,
+                     gpointer      user_data)
+{
+  EosShardWriterV2 *self = EOS_SHARD_WRITER_V2 (source_object);
+  self->parallel_write_blob_data.n_left--;
+}
+
+static void
+write_blob_thread_data_free (struct write_blob_thread_data *data)
+{
+  g_clear_object (&data->file);
+  g_free (data);
+}
+
+static void
+queue_write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
+{
+  g_main_context_push_thread_default (self->parallel_write_blob_data.context);
+
+  self->parallel_write_blob_data.n_left++;
+
+  struct write_blob_thread_data thread_data = {
+    .fd = self->ctx.fd,
+    .blob = blob,
+    .file = g_object_ref (file),
+  };
+
+  g_autoptr(GTask) task = g_task_new (G_OBJECT (self), NULL, write_blob_callback, NULL);
+  g_task_set_task_data (task, g_memdup (&thread_data, sizeof (thread_data)), (GDestroyNotify) write_blob_thread_data_free);
+  g_task_run_in_thread (task, write_blob_thread);
+
+  g_main_context_pop_thread_default (self->parallel_write_blob_data.context);
 }
 
 /**
@@ -194,7 +382,6 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   struct eos_shard_writer_v2_blob_entry b = {};
   g_autoptr(GFileInfo) info = NULL;
 
-  b.file = g_object_ref (file);
   b.name = g_strdup (name);
 
   if (content_type == NULL) {
@@ -212,8 +399,26 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   b.sblob.content_type_offs = constant_pool_add (&self->cpool, content_type);
   b.sblob.uncompressed_size = g_file_info_get_size (info);
 
-  g_ptr_array_add (self->blobs, g_memdup (&b, sizeof (b)));
+  /* Position the blob in the file. */
+
+#ifdef HAVE_FALLOCATE
+  /* If we have fallocate, then use a multiple of the blocksize so that we can
+   * cut out the blocks with zeroes afterwards. */
+  self->ctx.offset = _ALIGN (self->ctx.offset, self->ctx.blksize);
+#else
+  self->ctx.offset = ALIGN (self->ctx.offset);
+#endif
+
+  b.offs = self->ctx.offset;
+  self->ctx.offset += sizeof (b.sblob) + b.sblob.uncompressed_size;
+
+  struct eos_shard_writer_v2_blob_entry *blob = g_memdup (&b, sizeof (b));
+  g_ptr_array_add (self->blobs, blob);
   int index = self->blobs->len - 1;
+
+  /* Write out the blob in a separate thread. */
+  queue_write_blob (self, blob, file);
+
   return index;
 }
 
@@ -252,53 +457,6 @@ eos_shard_writer_v2_add_blob_to_record (EosShardWriterV2 *self,
   struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, self->records->len - 1);
   struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, blob_id);
   g_array_append_val (e->blobs, b);
-}
-
-struct write_context
-{
-  int fd;
-  off_t offset;
-};
-
-static void
-write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
-{
-  g_autoptr(GError) error = NULL;
-
-  GFileInputStream *file_stream = g_file_read (blob->file, NULL, &error);
-  if (!file_stream) {
-    g_error ("Could not read from %s: %s", g_file_get_path (blob->file), error->message);
-    return;
-  }
-
-  g_autoptr(GInputStream) stream;
-
-  if (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
-    stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
-    g_object_unref (file_stream);
-  } else {
-    stream = G_INPUT_STREAM (file_stream);
-  }
-
-  off_t data_start = blob->offs + sizeof (blob->sblob);
-  off_t offset = data_start;
-
-  uint8_t buf[4096*4];
-  int size;
-  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
-  while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
-    g_assert (pwrite (fd, buf, size, offset) >= 0);
-    g_checksum_update (checksum, buf, size);
-    offset += size;
-  }
-
-  size_t checksum_buf_len = sizeof (blob->sblob.csum);
-  g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
-  g_assert (checksum_buf_len == sizeof (blob->sblob.csum));
-
-  blob->sblob.data_start = data_start;
-  blob->sblob.size = (offset - data_start);
 }
 
 static gint
@@ -345,130 +503,16 @@ compare_records (gconstpointer a, gconstpointer b)
   return memcmp (r_a->raw_name, r_b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
-#ifdef HAVE_FALLOCATE
-
-struct write_blob_thread_data
-{
-  int fd;
-  struct eos_shard_writer_v2_blob_entry *blob;
-};
-
 static void
-write_blob_thread (GTask *task,
-                   gpointer source_object,
-                   gpointer task_data,
-                   GCancellable *cancellable)
-{
-  struct write_blob_thread_data *data = task_data;
-  write_blob (data->fd, data->blob);
-  g_task_return_int (task, 0);
-}
-
-struct parallel_write_blob_data
-{
-  int n_left;
-};
-
-static void
-write_blob_callback (GObject      *source_object,
-                     GAsyncResult *result,
-                     gpointer      user_data)
-{
-  struct parallel_write_blob_data *data = user_data;
-  data->n_left--;
-}
-
-/* This is the fancy algorithm we use on Linux that can be multi-threaded. */
-
-static gboolean
-blob_is_compressed (struct eos_shard_writer_v2_blob_entry *blob)
-{
-  return (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB);
-}
-
-static gint
-compare_blobs_by_offset (gconstpointer a, gconstpointer b)
-{
-  struct eos_shard_writer_v2_blob_entry *blob_a = * (struct eos_shard_writer_v2_blob_entry **) a;
-  struct eos_shard_writer_v2_blob_entry *blob_b = * (struct eos_shard_writer_v2_blob_entry **) b;
-
-  if (blob_a->offs > blob_b->offs)
-    return 1;
-  if (blob_a->offs == blob_b->offs)
-    return 0;
-  if (blob_a->offs < blob_b->offs)
-    return -1;
-
-  g_assert_not_reached ();
-}
-
-static void
-write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
+finish_writing_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 {
   int i;
 
-  off_t offset = ctx->offset;
+  /* Wait until we're done writing all of our data to disk... */
+  while (self->parallel_write_blob_data.n_left > 0)
+    g_main_context_iteration (self->parallel_write_blob_data.context, TRUE);
 
-  struct stat stbuf;
-  fstat (ctx->fd, &stbuf);
-
-  size_t blksize = stbuf.st_blksize;
-
-#define BLOB_ALIGN(n) (_ALIGN(n, blksize))
-
-  /* Writing blob data is a bit tricksy, since we use several methods for speed.
-   * First, we write out all blobs which are not "CPU intensive" in a serial manner. */
-
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-
-    if (blob_is_compressed (b))
-      continue;
-
-    b->offs = offset = ALIGN (offset);
-    offset += sizeof (b->sblob) + b->sblob.uncompressed_size;
-  }
-
-  /* Next, we schedule the position for each blob that is CPU intensive using its
-   * *uncompressed data size*, but page aligned. After that, do the CPU-intensive work
-   * in parallel at the recommended offsets. After that, if supported, we throw out
-   * the pages we don't care about and adjust the data offsets... */
-
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-
-    if (!blob_is_compressed (b))
-      continue;
-
-    b->offs = offset = BLOB_ALIGN (offset);
-    offset += sizeof (b->sblob) + b->sblob.uncompressed_size;
-  }
-
-  /* Now that all blobs are scheduled, sort them by offset. This is required
-   * for us to calculate the deltas to fallocate below... */
-  g_ptr_array_sort (self->blobs, compare_blobs_by_offset);
-
-  /* Write in parallel... */
-  GMainContext *context = g_main_context_new ();
-  g_main_context_push_thread_default (context);
-
-  struct parallel_write_blob_data parallel_data = {
-    .n_left = self->blobs->len,
-  };
-
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-    struct write_blob_thread_data thread_data = { .fd = ctx->fd, .blob = b };
-    g_autoptr(GTask) task = g_task_new (NULL, NULL, write_blob_callback, &parallel_data);
-    g_task_set_task_data (task, g_memdup (&thread_data, sizeof (thread_data)), (GDestroyNotify) g_free);
-    g_task_run_in_thread (task, write_blob_thread);
-  }
-
-  while (parallel_data.n_left > 0)
-    g_main_context_iteration (context, TRUE);
-
-  g_main_context_pop_thread_default (context);
-  g_main_context_unref (context);
+#ifdef HAVE_FALLOCATE
 
   off_t blob_offset_delta = 0;
 
@@ -480,79 +524,47 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
     b->offs -= blob_offset_delta;
     b->sblob.data_start -= blob_offset_delta;
 
-    if (!blob_is_compressed (b))
-      continue;
-
-    off_t uncompressed_data_end = BLOB_ALIGN (b->sblob.data_start + b->sblob.uncompressed_size);
-    off_t compressed_data_end = BLOB_ALIGN (b->sblob.data_start + b->sblob.size);
+    off_t uncompressed_data_end = _ALIGN (b->sblob.data_start + b->sblob.uncompressed_size, ctx->blksize);
+    off_t compressed_data_end = _ALIGN (b->sblob.data_start + b->sblob.size, ctx->blksize);
 
     off_t remove_range_start = compressed_data_end;
     off_t remove_range_length = uncompressed_data_end - compressed_data_end;
 
     if (remove_range_length > 0) {
-      /* If we're the last blob, then the zeroes probably haven't been written out to disk -- let's just stomp over them. */
-      gboolean is_last_blob = (i == self->blobs->len - 1);
-
-      if (is_last_blob || fallocate (ctx->fd, FALLOC_FL_COLLAPSE_RANGE, remove_range_start, remove_range_length) == 0) {
+      if (fallocate (ctx->fd, FALLOC_FL_COLLAPSE_RANGE, remove_range_start, remove_range_length) == 0) {
         /* We successfully collapsed this range. Adjust blob offsets from this point forward. */
         blob_offset_delta += remove_range_length;
       }
     }
   }
 
-  offset -= blob_offset_delta;
+  ctx->offset -= blob_offset_delta;
+
+#endif /* HAVE_FALLOCATE */
 
   /* Now go through and write out blob headers. */
   for (i = 0; i < self->blobs->len; i++) {
     struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
     g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
   }
-
-  ctx->offset = BLOB_ALIGN (offset);
-
-#undef BLOB_ALIGN
 }
-
-#else
-
-static void
-write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
-{
-  int i;
-
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-
-    b->offs = ctx->offset = ALIGN (ctx->offset);
-    write_blob (ctx->fd, b);
-    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
-    ctx->offset += b->sblob.size + sizeof (b->sblob);
-  }
-}
-
-#endif /* HAVE_FALLOCATE */
 
 void
-eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
+eos_shard_writer_v2_finish (EosShardWriterV2 *self)
 {
   int i;
 
   /* Sort our records to allow for binary searches on retrieval. */
   g_array_sort (self->records, &compare_records);
 
-  struct write_context _ctx = {
-    .fd = fd,
-  };
-  struct write_context *ctx = &_ctx;
+  struct write_context *ctx = &self->ctx;
 
   struct eos_shard_v2_hdr hdr = { };
 
   memcpy (hdr.magic, EOS_SHARD_V2_MAGIC, sizeof (hdr.magic));
   hdr.records_length = self->records->len;
 
-  ctx->offset = sizeof (hdr);
-
-  write_blobs (self, ctx);
+  finish_writing_blobs (self, &self->ctx);
   ctx->offset = ALIGN (ctx->offset);
 
   /* Now write out blob tables... */
@@ -573,20 +585,4 @@ eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
   constant_pool_write (&self->cpool, ctx->fd, hdr.string_constant_table_start);
 
   g_assert (pwrite (ctx->fd, &hdr, sizeof (hdr), 0) >= 0);
-}
-
-/**
- * eos_shard_writer_v2_write:
- * @self: An #EosShardWriterV2
- * @path: The file path to write the shard to.
- *
- * This finalizes the shard and writes the contents to the file path
- * specified. Meant as the final step in compiling a shard file together.
- */
-void
-eos_shard_writer_v2_write (EosShardWriterV2 *self, char *path)
-{
-  int fd = open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  eos_shard_writer_v2_write_to_fd (self, fd);
-  close (fd);
 }
