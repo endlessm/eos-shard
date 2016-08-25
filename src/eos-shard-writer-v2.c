@@ -515,6 +515,8 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
     b->offs = ALIGN (ctx->offset);
     write_blob (ctx->fd, b);
     ctx->offset += b->sblob.size;
+
+    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
   }
 }
 
