@@ -288,7 +288,7 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  off_t data_start = ALIGN (blob->offs + sizeof (blob->sblob));
+  off_t data_start = blob->offs + sizeof (blob->sblob);
   off_t offset = data_start;
 
   uint8_t buf[4096*4];
