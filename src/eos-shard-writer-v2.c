@@ -288,7 +288,7 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
     stream = G_INPUT_STREAM (file_stream);
   }
 
-  off_t data_start = ALIGN (blob->offs + sizeof (blob->sblob));
+  off_t data_start = blob->offs + sizeof (blob->sblob);
   off_t offset = data_start;
 
   uint8_t buf[4096*4];
@@ -306,37 +306,6 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
 
   blob->sblob.data_start = data_start;
   blob->sblob.size = (offset - data_start);
-}
-
-struct write_blob_thread_data
-{
-  int fd;
-  struct eos_shard_writer_v2_blob_entry *blob;
-};
-
-static void
-write_blob_thread (GTask *task,
-                   gpointer source_object,
-                   gpointer task_data,
-                   GCancellable *cancellable)
-{
-  struct write_blob_thread_data *data = task_data;
-  write_blob (data->fd, data->blob);
-  g_task_return_int (task, 0);
-}
-
-struct parallel_write_blob_data
-{
-  int n_left;
-};
-
-static void
-write_blob_callback (GObject      *source_object,
-                     GAsyncResult *result,
-                     gpointer      user_data)
-{
-  struct parallel_write_blob_data *data = user_data;
-  data->n_left--;
 }
 
 static gint
@@ -390,6 +359,37 @@ compare_records (gconstpointer a, gconstpointer b)
 }
 
 #ifdef HAVE_FALLOCATE
+
+struct write_blob_thread_data
+{
+  int fd;
+  struct eos_shard_writer_v2_blob_entry *blob;
+};
+
+static void
+write_blob_thread (GTask *task,
+                   gpointer source_object,
+                   gpointer task_data,
+                   GCancellable *cancellable)
+{
+  struct write_blob_thread_data *data = task_data;
+  write_blob (data->fd, data->blob);
+  g_task_return_int (task, 0);
+}
+
+struct parallel_write_blob_data
+{
+  int n_left;
+};
+
+static void
+write_blob_callback (GObject      *source_object,
+                     GAsyncResult *result,
+                     gpointer      user_data)
+{
+  struct parallel_write_blob_data *data = user_data;
+  data->n_left--;
+}
 
 /* This is the fancy algorithm we use on Linux that can be multi-threaded. */
 
@@ -514,7 +514,8 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 
     b->offs = ALIGN (ctx->offset);
     write_blob (ctx->fd, b);
-    ctx->offset += b->sblob.size;
+    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
+    ctx->offset += b->sblob.size + sizeof (b->sblob);
   }
 }
 
