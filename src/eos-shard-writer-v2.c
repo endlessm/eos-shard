@@ -456,7 +456,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
   g_main_context_pop_thread_default (context);
   g_main_context_unref (context);
 
-  uint64_t blob_offset_delta = 0;
+  off_t blob_offset_delta = 0;
 
   /* Go through and remove unused chunks from each blob. */
   for (i = 0; i < self->blobs->len; i++) {
@@ -465,11 +465,11 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
     b->offs -= blob_offset_delta;
     b->sblob.data_start -= blob_offset_delta;
 
-    uint64_t uncompressed_data_end = BLOB_ALIGN (b->offs + b->sblob.uncompressed_size);
-    uint64_t compressed_data_end = BLOB_ALIGN (b->offs + b->sblob.size);
+    off_t uncompressed_data_end = BLOB_ALIGN (b->offs + b->sblob.uncompressed_size);
+    off_t compressed_data_end = BLOB_ALIGN (b->offs + b->sblob.size);
 
-    uint64_t remove_range_start = compressed_data_end;
-    uint64_t remove_range_length = uncompressed_data_end - compressed_data_end;
+    off_t remove_range_start = compressed_data_end;
+    off_t remove_range_length = uncompressed_data_end - compressed_data_end;
 
     if (remove_range_length > 0) {
       /* If we're the last blob, then the zeroes probably haven't been written out to disk -- let's just stomp over them. */
