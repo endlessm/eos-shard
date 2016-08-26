@@ -263,14 +263,7 @@ struct write_context
 static void
 write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
 {
-  /* If we don't have any file, that's normal... */
-  if (!blob->file)
-    return;
-
   g_autoptr(GError) error = NULL;
-
-  if (!blob->file)
-    return;
 
   GFileInputStream *file_stream = g_file_read (blob->file, NULL, &error);
   if (!file_stream) {
