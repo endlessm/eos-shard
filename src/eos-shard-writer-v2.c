@@ -67,7 +67,7 @@ struct _EosShardWriterV2
 {
   GObject parent;
 
-  GArray *blobs;
+  GPtrArray *blobs;
   GArray *records;
 
   struct constant_pool cpool;
@@ -125,16 +125,17 @@ eos_shard_writer_v2_finalize (GObject *object)
 {
   EosShardWriterV2 *self = EOS_SHARD_WRITER_V2 (object);
   constant_pool_dispose (&self->cpool);
-  g_array_unref (self->blobs);
+  g_ptr_array_unref (self->blobs);
   g_array_unref (self->records);
   G_OBJECT_CLASS (eos_shard_writer_v2_parent_class)->finalize (object);
 }
 
 static void
-eos_shard_writer_v2_blob_entry_clear (struct eos_shard_writer_v2_blob_entry *blob)
+eos_shard_writer_v2_blob_entry_free (struct eos_shard_writer_v2_blob_entry *blob)
 {
   g_clear_object (&blob->file);
   g_free (blob->name);
+  g_free (blob);
 }
 
 static void
@@ -146,7 +147,7 @@ eos_shard_writer_v2_record_entry_clear (struct eos_shard_writer_v2_record_entry 
 static void
 eos_shard_writer_v2_record_entry_init (struct eos_shard_writer_v2_record_entry *e)
 {
-  e->blobs = g_array_new (FALSE, TRUE, sizeof (uint64_t));
+  e->blobs = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v2_blob_entry *));
 }
 
 static void
@@ -163,8 +164,7 @@ eos_shard_writer_v2_init (EosShardWriterV2 *self)
 {
   constant_pool_init (&self->cpool);
 
-  self->blobs = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v2_blob_entry));
-  g_array_set_clear_func (self->blobs, (GDestroyNotify) eos_shard_writer_v2_blob_entry_clear);
+  self->blobs = g_ptr_array_new_with_free_func ((GDestroyNotify) eos_shard_writer_v2_blob_entry_free);
 
   self->records = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v2_record_entry));
   g_array_set_clear_func (self->records, (GDestroyNotify) eos_shard_writer_v2_record_entry_clear);
@@ -212,7 +212,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   b.sblob.content_type_offs = constant_pool_add (&self->cpool, content_type);
   b.sblob.uncompressed_size = g_file_info_get_size (info);
 
-  g_array_append_val (self->blobs, b);
+  g_ptr_array_add (self->blobs, g_memdup (&b, sizeof (b)));
   int index = self->blobs->len - 1;
   return index;
 }
@@ -247,11 +247,11 @@ eos_shard_writer_v2_add_record (EosShardWriterV2 *self,
  */
 void
 eos_shard_writer_v2_add_blob_to_record (EosShardWriterV2 *self,
-                                        uint64_t        blob_id)
+                                        uint64_t          blob_id)
 {
   struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, self->records->len - 1);
-
-  g_array_append_val (e->blobs, blob_id);
+  struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, blob_id);
+  g_array_append_val (e->blobs, b);
 }
 
 struct write_context
@@ -302,29 +302,23 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob)
 }
 
 static gint
-compare_blob_table_entries (gconstpointer a, gconstpointer b, gpointer user_data)
+compare_blob_table_entries (gconstpointer a, gconstpointer b)
 {
-  EosShardWriterV2 *self = user_data;
-
-  uint64_t idx_a = * (uint64_t *) a;
-  uint64_t idx_b = * (uint64_t *) b;
-  struct eos_shard_writer_v2_blob_entry *blob_a, *blob_b;
-  blob_a = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, idx_a);
-  blob_b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, idx_b);
+  struct eos_shard_writer_v2_blob_entry *blob_a = * (struct eos_shard_writer_v2_blob_entry **) a;
+  struct eos_shard_writer_v2_blob_entry *blob_b = * (struct eos_shard_writer_v2_blob_entry **) b;
   return strcmp (blob_a->name, blob_b->name);
 }
 
 static void
-write_blob_table (EosShardWriterV2 *self, struct write_context *ctx, struct eos_shard_writer_v2_record_entry *e)
+write_blob_table (struct write_context *ctx, struct eos_shard_writer_v2_record_entry *e)
 {
   e->blob_table_start = ctx->offset;
 
-  g_array_sort_with_data (e->blobs, compare_blob_table_entries, self);
+  g_array_sort (e->blobs, compare_blob_table_entries);
 
   int i;
   for (i = 0; i < e->blobs->len; i++) {
-    uint64_t blob_id = g_array_index (e->blobs, uint64_t, i);
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, blob_id);
+    struct eos_shard_writer_v2_blob_entry *b = g_array_index (e->blobs, struct eos_shard_writer_v2_blob_entry *, i);
     struct eos_shard_v2_record_blob_table_entry be = { .blob_start = b->offs };
     g_assert (pwrite (ctx->fd, &be, sizeof (be), ctx->offset) >= 0);
     ctx->offset += sizeof (be);
@@ -410,7 +404,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
    * First, we write out all blobs which are not "CPU intensive" in a serial manner. */
 
   for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
 
     if (blob_is_compressed (b))
       continue;
@@ -425,7 +419,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
    * the pages we don't care about and adjust the data offsets... */
 
   for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
 
     if (!blob_is_compressed (b))
       continue;
@@ -443,7 +437,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
   };
 
   for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
     struct write_blob_thread_data thread_data = { .fd = ctx->fd, .blob = b };
     g_autoptr(GTask) task = g_task_new (NULL, NULL, write_blob_callback, &parallel_data);
     g_task_set_task_data (task, g_memdup (&thread_data, sizeof (thread_data)), (GDestroyNotify) g_free);
@@ -460,7 +454,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 
   /* Go through and remove unused chunks from each blob. */
   for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
 
     b->offs -= blob_offset_delta;
     b->sblob.data_start -= blob_offset_delta;
@@ -486,7 +480,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 
   /* Now go through and write out blob headers. */
   for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
     g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
   }
 
@@ -503,7 +497,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
   int i;
 
   for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = &g_array_index (self->blobs, struct eos_shard_writer_v2_blob_entry, i);
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
 
     b->offs = ALIGN (ctx->offset);
     write_blob (ctx->fd, b);
@@ -540,7 +534,7 @@ eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd)
   /* Now write out blob tables... */
   for (i = 0; i < self->records->len; i++) {
     struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, i);
-    write_blob_table (self, ctx, e);
+    write_blob_table (ctx, e);
   }
 
   /* Now for records... */
