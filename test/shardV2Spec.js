@@ -332,5 +332,61 @@ describe('Basic Shard Writing', function () {
             expect(GObject.type_is_a(dataStream, Gio.Seekable)).toBe(false);
         });
     });
+
+    describe('specific bugs', function () {
+        it('handles interleaved compressed / uncompressed pairs correctly', function () {
+            let shard_writer = new EosShard.WriterV2();
+            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                  'application/json',
+                                                                  EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                  TestUtils.getTestFile('words'),
+                                                                  'application/json',
+                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2259f');
+            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                  'application/json',
+                                                                  EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                  TestUtils.getTestFile('words'),
+                                                                  'application/json',
+                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f225af');
+            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                  'application/json',
+                                                                  EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                  TestUtils.getTestFile('words'),
+                                                                  'application/json',
+                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            shard_writer.write(shard_path);
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            expect(function () {
+                // Check that checksums match up.
+                let record;
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+                record.metadata.load_contents();
+                record.data.load_contents();
+
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2259f');
+                record.metadata.load_contents();
+                record.data.load_contents();
+
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f225af');
+                record.metadata.load_contents();
+                record.data.load_contents();
+            }).not.toThrow();
+        });
+    });
 });
 
