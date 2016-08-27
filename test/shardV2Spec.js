@@ -24,13 +24,17 @@ const EosShard = imports.gi.EosShard;
 const TestUtils = imports.utils;
 
 describe('Basic Shard Writing', function () {
-    let shard_path;
+    let shard_path, iostream;
     beforeEach(function() {
-        let [shard_file, iostream] = Gio.File.new_tmp('XXXXXXX.shard');
+        /* don't use /tmp, since it might be a tmpfs, and we should test on ext4. */
+        let shard_file = Gio.File.new_for_path('test.shard');
+        iostream = shard_file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         shard_path = shard_file.get_path();
     });
 
     afterEach(function() {
+        iostream.close(null);
+
         let file = Gio.File.new_for_path(shard_path);
         try {
             file.delete(null);
