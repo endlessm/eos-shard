@@ -386,6 +386,22 @@ blob_is_compressed (struct eos_shard_writer_v2_blob_entry *blob)
   return (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB);
 }
 
+static gint
+compare_blobs_by_offset (gconstpointer a, gconstpointer b)
+{
+  struct eos_shard_writer_v2_blob_entry *blob_a = * (struct eos_shard_writer_v2_blob_entry **) a;
+  struct eos_shard_writer_v2_blob_entry *blob_b = * (struct eos_shard_writer_v2_blob_entry **) b;
+
+  if (blob_a->offs > blob_b->offs)
+    return 1;
+  if (blob_a->offs == blob_b->offs)
+    return 0;
+  if (blob_a->offs < blob_b->offs)
+    return -1;
+
+  g_assert_not_reached ();
+}
+
 static void
 write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 {
@@ -428,6 +444,10 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
     offset += sizeof (b->sblob) + b->sblob.uncompressed_size;
   }
 
+  /* Now that all blobs are scheduled, sort them by offset. This is required
+   * for us to calculate the deltas to fallocate below... */
+  g_ptr_array_sort (self->blobs, compare_blobs_by_offset);
+
   /* Write in parallel... */
   GMainContext *context = g_main_context_new ();
   g_main_context_push_thread_default (context);
@@ -453,11 +473,15 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
   off_t blob_offset_delta = 0;
 
   /* Go through and remove unused chunks from each blob. */
+
   for (i = 0; i < self->blobs->len; i++) {
     struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
 
     b->offs -= blob_offset_delta;
     b->sblob.data_start -= blob_offset_delta;
+
+    if (!blob_is_compressed (b))
+      continue;
 
     off_t uncompressed_data_end = BLOB_ALIGN (b->offs + b->sblob.uncompressed_size);
     off_t compressed_data_end = BLOB_ALIGN (b->offs + b->sblob.size);
