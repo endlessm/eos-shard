@@ -499,7 +499,7 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
   for (i = 0; i < self->blobs->len; i++) {
     struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
 
-    b->offs = ALIGN (ctx->offset);
+    b->offs = ctx->offset = ALIGN (ctx->offset);
     write_blob (ctx->fd, b);
     g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
     ctx->offset += b->sblob.size + sizeof (b->sblob);
