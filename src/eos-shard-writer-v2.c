@@ -483,8 +483,8 @@ write_blobs (EosShardWriterV2 *self, struct write_context *ctx)
     if (!blob_is_compressed (b))
       continue;
 
-    off_t uncompressed_data_end = BLOB_ALIGN (b->offs + b->sblob.uncompressed_size);
-    off_t compressed_data_end = BLOB_ALIGN (b->offs + b->sblob.size);
+    off_t uncompressed_data_end = BLOB_ALIGN (b->sblob.data_start + b->sblob.uncompressed_size);
+    off_t compressed_data_end = BLOB_ALIGN (b->sblob.data_start + b->sblob.size);
 
     off_t remove_range_start = compressed_data_end;
     off_t remove_range_length = uncompressed_data_end - compressed_data_end;
