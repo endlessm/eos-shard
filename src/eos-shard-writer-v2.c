@@ -82,6 +82,11 @@ struct _EosShardWriterV2
 {
   GObject parent;
 
+  /* This lock writes to the ctx, blobs, and records fields.
+   * Records themselves are meant to be handled by one thread
+   * and are not multi-thread safe. */
+  GMutex lock;
+
   struct write_context ctx;
 
   GPtrArray *blobs;
@@ -236,6 +241,8 @@ eos_shard_writer_v2_class_init (EosShardWriterV2Class *klass)
 static void
 eos_shard_writer_v2_init (EosShardWriterV2 *self)
 {
+  g_mutex_init (&self->lock);
+
   constant_pool_init (&self->cpool);
 
   self->blobs = g_ptr_array_new_with_free_func ((GDestroyNotify) eos_shard_writer_v2_blob_entry_free);
@@ -332,6 +339,8 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_return_val_if_fail (strlen (name) <= EOS_SHARD_V2_BLOB_MAX_NAME_SIZE, 0);
   g_return_val_if_fail (strlen (content_type) <= EOS_SHARD_V2_BLOB_MAX_CONTENT_TYPE_SIZE, 0);
 
+  g_mutex_lock (&self->lock);
+
   b.sblob.flags = flags;
   b.sblob.name_offs = constant_pool_add (&self->cpool, name);
   b.sblob.content_type_offs = constant_pool_add (&self->cpool, content_type);
@@ -354,6 +363,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_ptr_array_add (self->blobs, blob);
   uint64_t index = self->blobs->len - 1;
 
+  g_mutex_unlock (&self->lock);
 
   write_blob (self->ctx.fd, blob, file);
 
@@ -375,11 +385,15 @@ uint64_t
 eos_shard_writer_v2_add_record (EosShardWriterV2 *self,
                                 char *hex_name)
 {
+  g_mutex_lock (&self->lock);
+
   struct eos_shard_writer_v2_record_entry e = {};
   eos_shard_writer_v2_record_entry_init (&e);
   eos_shard_util_hex_name_to_raw_name (e.raw_name, hex_name);
   g_array_append_val (self->records, e);
   uint64_t index = self->records->len - 1;
+
+  g_mutex_unlock (&self->lock);
 
   return index;
 }
