@@ -84,11 +84,6 @@ struct _EosShardWriterV2
 
   struct write_context ctx;
 
-  struct {
-    GMainContext *context;
-    int n_left;
-  } parallel_write_blob_data;
-
   GPtrArray *blobs;
   GArray *records;
 
@@ -149,7 +144,6 @@ eos_shard_writer_v2_finalize (GObject *object)
   constant_pool_dispose (&self->cpool);
   g_ptr_array_unref (self->blobs);
   g_array_unref (self->records);
-  g_clear_pointer (&self->parallel_write_blob_data.context, g_main_context_unref);
   G_OBJECT_CLASS (eos_shard_writer_v2_parent_class)->finalize (object);
 }
 
@@ -248,8 +242,6 @@ eos_shard_writer_v2_init (EosShardWriterV2 *self)
 
   self->records = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v2_record_entry));
   g_array_set_clear_func (self->records, (GDestroyNotify) eos_shard_writer_v2_record_entry_clear);
-
-  self->parallel_write_blob_data.context = g_main_context_new ();
 }
 
 /**
@@ -302,60 +294,6 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
 
   blob->sblob.data_start = data_start;
   blob->sblob.size = (offset - data_start);
-}
-
-struct write_blob_thread_data
-{
-  int fd;
-  struct eos_shard_writer_v2_blob_entry *blob;
-  GFile *file;
-};
-
-static void
-write_blob_thread (GTask *task,
-                   gpointer source_object,
-                   gpointer task_data,
-                   GCancellable *cancellable)
-{
-  struct write_blob_thread_data *data = task_data;
-  write_blob (data->fd, data->blob, data->file);
-  g_task_return_int (task, 0);
-}
-
-static void
-write_blob_callback (GObject      *source_object,
-                     GAsyncResult *result,
-                     gpointer      user_data)
-{
-  EosShardWriterV2 *self = EOS_SHARD_WRITER_V2 (source_object);
-  self->parallel_write_blob_data.n_left--;
-}
-
-static void
-write_blob_thread_data_free (struct write_blob_thread_data *data)
-{
-  g_clear_object (&data->file);
-  g_free (data);
-}
-
-static void
-queue_write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
-{
-  g_main_context_push_thread_default (self->parallel_write_blob_data.context);
-
-  self->parallel_write_blob_data.n_left++;
-
-  struct write_blob_thread_data thread_data = {
-    .fd = self->ctx.fd,
-    .blob = blob,
-    .file = g_object_ref (file),
-  };
-
-  g_autoptr(GTask) task = g_task_new (G_OBJECT (self), NULL, write_blob_callback, NULL);
-  g_task_set_task_data (task, g_memdup (&thread_data, sizeof (thread_data)), (GDestroyNotify) write_blob_thread_data_free);
-  g_task_run_in_thread (task, write_blob_thread);
-
-  g_main_context_pop_thread_default (self->parallel_write_blob_data.context);
 }
 
 /**
@@ -416,8 +354,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_ptr_array_add (self->blobs, blob);
   int index = self->blobs->len - 1;
 
-  /* Write out the blob in a separate thread. */
-  queue_write_blob (self, blob, file);
+  write_blob (self->ctx.fd, blob, file);
 
   return index;
 }
@@ -507,10 +444,6 @@ static void
 finish_writing_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 {
   int i;
-
-  /* Wait until we're done writing all of our data to disk... */
-  while (self->parallel_write_blob_data.n_left > 0)
-    g_main_context_iteration (self->parallel_write_blob_data.context, TRUE);
 
 #ifdef HAVE_FALLOCATE
 
