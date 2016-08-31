@@ -352,7 +352,8 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
 
   struct eos_shard_writer_v2_blob_entry *blob = g_memdup (&b, sizeof (b));
   g_ptr_array_add (self->blobs, blob);
-  int index = self->blobs->len - 1;
+  uint64_t index = self->blobs->len - 1;
+
 
   write_blob (self->ctx.fd, blob, file);
 
@@ -370,7 +371,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
  * To set the individual fields of the blobs within the record,
  * use eos_shard_writer_v2_add_blob().
  */
-void
+uint64_t
 eos_shard_writer_v2_add_record (EosShardWriterV2 *self,
                                 char *hex_name)
 {
@@ -378,20 +379,25 @@ eos_shard_writer_v2_add_record (EosShardWriterV2 *self,
   eos_shard_writer_v2_record_entry_init (&e);
   eos_shard_util_hex_name_to_raw_name (e.raw_name, hex_name);
   g_array_append_val (self->records, e);
+  uint64_t index = self->records->len - 1;
+
+  return index;
 }
 
 /**
  * eos_shard_writer_v2_add_blob_to_record:
  * @self: an #EosShardWriterV2
+ * @record_id: An opaque record ID, retrieved from eos_shard_writer_v2_add_record().
  * @blob_id: An opaque blob ID, retrieved from eos_shard_writer_v2_add_blob().
  *
- * Adds the referenced blob to the last added record.
+ * Adds the referenced blob to the specified record.
  */
 void
 eos_shard_writer_v2_add_blob_to_record (EosShardWriterV2 *self,
+                                        uint64_t          record_id,
                                         uint64_t          blob_id)
 {
-  struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, self->records->len - 1);
+  struct eos_shard_writer_v2_record_entry *e = &g_array_index (self->records, struct eos_shard_writer_v2_record_entry, record_id);
   struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, blob_id);
   g_array_append_val (e->blobs, b);
 }
