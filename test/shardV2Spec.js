@@ -24,13 +24,18 @@ const EosShard = imports.gi.EosShard;
 const TestUtils = imports.utils;
 
 describe('Basic Shard Writing', function () {
-    let shard_path;
+    let shard_path, ostream, shard_fd;
     beforeEach(function() {
-        let [shard_file, iostream] = Gio.File.new_tmp('XXXXXXX.shard');
+        /* don't use /tmp, since it might be a tmpfs, and we should test on ext4. */
+        let shard_file = Gio.File.new_for_path('test.shard');
+        ostream = shard_file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         shard_path = shard_file.get_path();
+        shard_fd = ostream.get_fd();
     });
 
     afterEach(function() {
+        ostream.close(null);
+
         let file = Gio.File.new_for_path(shard_path);
         try {
             file.delete(null);
@@ -42,19 +47,19 @@ describe('Basic Shard Writing', function () {
 
     describe('shards with single records', function() {
         beforeEach(function() {
-            let shard_writer = new EosShard.WriterV2();
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
 
-            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
 
-            shard_writer.write(shard_path);
+            shard_writer.finish();
         });
 
         it('can create a shard file with a single record', function() {
@@ -105,29 +110,29 @@ describe('Basic Shard Writing', function () {
 
     describe('multiple record shards', function() {
         beforeEach(function() {
-            let shard_writer = new EosShard.WriterV2();
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
 
-            shard_writer.add_record('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.NONE));
+            let r = shard_writer.add_record('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.NONE));
 
-            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.NONE));
+            r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.NONE));
 
-            shard_writer.write(shard_path);
+            shard_writer.finish();
         });
 
         it('can create a shard file with multiple records', function() {
@@ -148,18 +153,19 @@ describe('Basic Shard Writing', function () {
 
     describe('NULL errors', function() {
         it('handles NULLs in filenames correctly', function() {
-            let shard_writer = new EosShard.WriterV2();
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+
             // The record here has '00's which will translate to NULL bytes.
-            shard_writer.add_record('f500000000e9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.write(shard_path);
+            let r = shard_writer.add_record('f500000000e9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.finish();
 
             let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
@@ -176,17 +182,18 @@ describe('Basic Shard Writing', function () {
             // Found by bash magic one-liner:
             //  $ for i in $(seq 1 100); do (printf 'a%.0s' $(seq 1 $i) | openssl dgst -sha1 -c | grep '00') && echo $i; done
 
-            let shard_writer = new EosShard.WriterV2();
-            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('nul_example'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.write(shard_path);
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('nul_example'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.finish();
 
             let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
@@ -211,17 +218,17 @@ describe('Basic Shard Writing', function () {
             for (var align = 0; align < 128; align++) {
                 let content_type = Array(align).join('a');
 
-                let shard_writer = new EosShard.WriterV2();
-                shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-                shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                      TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                      content_type,
-                                                                      EosShard.BlobFlags.NONE));
-                shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                      TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
-                                                                      'test',
-                                                                      EosShard.BlobFlags.NONE));
-                shard_writer.write(shard_path);
+                let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+                let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+                shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                         TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                         content_type,
+                                                                         EosShard.BlobFlags.NONE));
+                shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                         TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                                                         'test',
+                                                                         EosShard.BlobFlags.NONE));
+                shard_writer.finish();
 
                 let shard_file = new EosShard.ShardFile({ path: shard_path });
                 shard_file.init(null);
@@ -237,13 +244,13 @@ describe('Basic Shard Writing', function () {
 
     describe('Allow records with no metadata / data', function() {
         it('handles no metadata correctly', function() {
-            let shard_writer = new EosShard.WriterV2();
-            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
-                                                                  'test',
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.write(shard_path);
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                                                     'test',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.finish();
 
             let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
@@ -260,13 +267,13 @@ describe('Basic Shard Writing', function () {
         });
 
         it('handles no data correctly', function() {
-            let shard_writer = new EosShard.WriterV2();
-            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.NONE));
-            shard_writer.write(shard_path);
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.finish();
 
             let shard_file = new EosShard.ShardFile({ path: shard_path });
             shard_file.init(null);
@@ -285,29 +292,29 @@ describe('Basic Shard Writing', function () {
 
     describe('streaming', function() {
         beforeEach(function () {
-            let shard_writer = new EosShard.WriterV2();
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
 
-            shard_writer.add_record('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
+            let r = shard_writer.add_record('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.blob'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
 
-            shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
-                                                                  'application/json',
-                                                                  EosShard.BlobFlags.COMPRESSED_ZLIB));
-            shard_writer.add_blob_to_record(shard_writer.add_blob(EosShard.V2_BLOB_DATA,
-                                                                  TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
-                                                                  null,
-                                                                  EosShard.BlobFlags.NONE));
+            r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.blob'),
+                                                                     null,
+                                                                     EosShard.BlobFlags.NONE));
 
-            shard_writer.write(shard_path);
+            shard_writer.finish();
         });
 
         it('should be seekable when uncompressed', function () {
@@ -326,6 +333,107 @@ describe('Basic Shard Writing', function () {
             let record = shard_file.find_record_by_hex_name('7d97e98f8af710c7e7fe703abc8f639e0ee507c4');
             let dataStream = record.data.get_stream();
             expect(GObject.type_is_a(dataStream, Gio.Seekable)).toBe(false);
+        });
+    });
+
+    describe('specific bugs', function () {
+        it('handles interleaved compressed / uncompressed pairs correctly', function () {
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('words'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2259f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('words'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f225af');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('words'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            shard_writer.finish();
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            expect(function () {
+                // Check that checksums match up.
+                let record;
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+                record.metadata.load_contents();
+                record.data.load_contents();
+
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2259f');
+                record.metadata.load_contents();
+                record.data.load_contents();
+
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f225af');
+                record.metadata.load_contents();
+                record.data.load_contents();
+            }).not.toThrow();
+        });
+
+        it('works correctly with certain sized records', function () {
+            // This is to test the issue where we go over a block boundary -- just
+            // slightly -- after compression, and the code didn't take the header
+            // size into account when calculating which blocks to chop.
+
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+
+            // This blob is specially crafted to compress from 0x8000 bytes to
+            // 0x1006 bytes. It was generated by:
+            //
+            // $ dd if=/dev/random of=random_data bs=1 count=3795
+            // $ seq 8 | xargs -I -- cat random_data > random_data_8x
+            // $ gzip -c < random_data_8x | wc -c
+            // 4102
+            //
+            // Due to the nature of random data, it might take a few tries to
+            // get something of that size, but since random data is uncompressable,
+            // it should be near that target.
+
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('random_data_8x'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            // The last blob never gets fallocated, so add one at the end.
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_DATA,
+                                                                     TestUtils.getTestFile('words'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.COMPRESSED_ZLIB));
+
+            shard_writer.finish();
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            expect(function () {
+                // Check that checksums match up.
+                let record;
+                record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+                record.metadata.load_contents();
+                record.data.load_contents();
+            }).not.toThrow();
         });
     });
 });

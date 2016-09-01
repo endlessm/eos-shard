@@ -32,14 +32,17 @@
 #define EOS_SHARD_TYPE_WRITER_V2 (eos_shard_writer_v2_get_type ())
 G_DECLARE_FINAL_TYPE (EosShardWriterV2, eos_shard_writer_v2, EOS_SHARD, WRITER_V2, GObject)
 
-uint64_t eos_shard_writer_v2_add_blob (EosShardWriterV2    *self,
+EosShardWriterV2 * eos_shard_writer_v2_new_for_fd (int fd);
+
+uint64_t eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
                                        char              *name,
                                        GFile             *file,
                                        char              *content_type,
                                        EosShardBlobFlags  flags);
-void eos_shard_writer_v2_add_record (EosShardWriterV2 *self,
-                                     char *hex_name);
+uint64_t eos_shard_writer_v2_add_record (EosShardWriterV2 *self,
+                                         char *hex_name);
 void eos_shard_writer_v2_add_blob_to_record (EosShardWriterV2 *self,
-                                             uint64_t        blob_id);
-void eos_shard_writer_v2_write_to_fd (EosShardWriterV2 *self, int fd);
-void eos_shard_writer_v2_write (EosShardWriterV2 *self, char *path);
+                                             uint64_t          record_id,
+                                             uint64_t          blob_id);
+
+void eos_shard_writer_v2_finish (EosShardWriterV2 *self);
