@@ -348,7 +348,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
 
   /* Position the blob in the file. */
 
-#ifdef HAVE_FALLOCATE
+#if defined(HAVE_FALLOCATE) && defined(FALLOC_FL_COLLAPSE_RANGE)
   /* If we have fallocate, then use a multiple of the blocksize so that we can
    * cut out the blocks with zeroes afterwards. */
   self->ctx.offset = _ALIGN (self->ctx.offset, self->ctx.blksize);
@@ -465,7 +465,7 @@ finish_writing_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 {
   int i;
 
-#ifdef HAVE_FALLOCATE
+#if defined(HAVE_FALLOCATE) && defined(FALLOC_FL_COLLAPSE_RANGE)
 
   off_t blob_offset_delta = 0;
 
