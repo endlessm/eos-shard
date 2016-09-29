@@ -21,16 +21,16 @@
 
 #include "eos-shard-writer-v2.h"
 
-#ifdef HAVE_FALLOCATE
-#include <linux/falloc.h>
-#endif
-
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <gio/gfiledescriptorbased.h>
+#include <gio/gunixinputstream.h>
 
 #include "eos-shard-shard-file.h"
 #include "eos-shard-format-v2.h"
@@ -262,26 +262,59 @@ eos_shard_writer_v2_new_for_fd (int fd)
   return EOS_SHARD_WRITER_V2 (g_object_new (EOS_SHARD_TYPE_WRITER_V2, "fd", fd, NULL));
 }
 
+static int
+compress_blob_to_tmp (GInputStream *file_stream)
+{
+  char tmpl[] = "/tmp/shardXXXXXX";
+  int fd = mkstemp (tmpl);
+  unlink (tmpl);
+
+  /* Compress the given GInputStream to the tmpfile. */
+
+  g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
+  g_autoptr(GInputStream) stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
+
+  uint8_t buf[4096*4];
+  int size;
+  while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
+    g_assert (write (fd, buf, size) >= 0);
+  }
+
+  return fd;
+}
+
 static void
-write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
+write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
 {
   g_autoptr(GError) error = NULL;
 
-  GFileInputStream *file_stream = g_file_read (file, NULL, &error);
+  g_autoptr(GFileInputStream) file_stream = g_file_read (file, NULL, &error);
   if (!file_stream) {
     g_error ("Could not read from %s: %s", g_file_get_path (file), error->message);
     return;
   }
 
-  g_autoptr(GInputStream) stream;
-
+  int blob_fd;
   if (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
-    stream = g_converter_input_stream_new (G_INPUT_STREAM (file_stream), G_CONVERTER (compressor));
-    g_object_unref (file_stream);
+    blob_fd = compress_blob_to_tmp (G_INPUT_STREAM (file_stream));
   } else {
-    stream = G_INPUT_STREAM (file_stream);
+    blob_fd = g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (file_stream));
   }
+
+  /* Find the size by seeking... */
+  uint64_t blob_size = lseek (blob_fd, 0, SEEK_END);
+  g_assert (blob_size >= 0);
+  g_assert (lseek (blob_fd, 0, SEEK_SET) >= 0);
+
+  /* Position the blob in the file. */
+
+  /* XXX: We could use different locks for ctx offset and blobs
+   * if we notice a lot of threading contention in the future. */
+  g_mutex_lock (&self->lock);
+  int shard_fd = self->ctx.fd;
+  blob->offs = self->ctx.offset;
+  self->ctx.offset = ALIGN (self->ctx.offset + sizeof (blob->sblob) + blob_size);
+  g_mutex_unlock (&self->lock);
 
   off_t data_start = blob->offs + sizeof (blob->sblob);
   off_t offset = data_start;
@@ -289,18 +322,20 @@ write_blob (int fd, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
   uint8_t buf[4096*4];
   int size;
   g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
-  while ((size = g_input_stream_read (stream, buf, sizeof (buf), NULL, NULL)) != 0) {
-    g_assert (pwrite (fd, buf, size, offset) >= 0);
+  while ((size = read (blob_fd, buf, sizeof (buf))) != 0) {
+    g_assert (pwrite (shard_fd, buf, size, offset) >= 0);
     g_checksum_update (checksum, buf, size);
     offset += size;
   }
+
+  close (blob_fd);
 
   size_t checksum_buf_len = sizeof (blob->sblob.csum);
   g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (blob->sblob.csum));
 
   blob->sblob.data_start = data_start;
-  blob->sblob.size = (offset - data_start);
+  blob->sblob.size = blob_size;
 }
 
 /**
@@ -346,26 +381,13 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   b.sblob.content_type_offs = constant_pool_add (&self->cpool, content_type);
   b.sblob.uncompressed_size = g_file_info_get_size (info);
 
-  /* Position the blob in the file. */
-
-#if defined(HAVE_FALLOCATE) && defined(FALLOC_FL_COLLAPSE_RANGE)
-  /* If we have fallocate, then use a multiple of the blocksize so that we can
-   * cut out the blocks with zeroes afterwards. */
-  self->ctx.offset = _ALIGN (self->ctx.offset, self->ctx.blksize);
-#else
-  self->ctx.offset = ALIGN (self->ctx.offset);
-#endif
-
-  b.offs = self->ctx.offset;
-  self->ctx.offset += sizeof (b.sblob) + b.sblob.uncompressed_size;
-
   struct eos_shard_writer_v2_blob_entry *blob = g_memdup (&b, sizeof (b));
   g_ptr_array_add (self->blobs, blob);
   uint64_t index = self->blobs->len - 1;
 
   g_mutex_unlock (&self->lock);
 
-  write_blob (self->ctx.fd, blob, file);
+  write_blob (self, blob, file);
 
   return index;
 }
@@ -464,36 +486,6 @@ static void
 finish_writing_blobs (EosShardWriterV2 *self, struct write_context *ctx)
 {
   int i;
-
-#if defined(HAVE_FALLOCATE) && defined(FALLOC_FL_COLLAPSE_RANGE)
-
-  off_t blob_offset_delta = 0;
-
-  /* Go through and remove unused chunks from each blob. */
-
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-
-    b->offs -= blob_offset_delta;
-    b->sblob.data_start -= blob_offset_delta;
-
-    off_t uncompressed_data_end = _ALIGN (b->sblob.data_start + b->sblob.uncompressed_size, ctx->blksize);
-    off_t compressed_data_end = _ALIGN (b->sblob.data_start + b->sblob.size, ctx->blksize);
-
-    off_t remove_range_start = compressed_data_end;
-    off_t remove_range_length = uncompressed_data_end - compressed_data_end;
-
-    if (remove_range_length > 0) {
-      if (fallocate (ctx->fd, FALLOC_FL_COLLAPSE_RANGE, remove_range_start, remove_range_length) == 0) {
-        /* We successfully collapsed this range. Adjust blob offsets from this point forward. */
-        blob_offset_delta += remove_range_length;
-      }
-    }
-  }
-
-  ctx->offset -= blob_offset_delta;
-
-#endif /* HAVE_FALLOCATE */
 
   /* Now go through and write out blob headers. */
   for (i = 0; i < self->blobs->len; i++) {
