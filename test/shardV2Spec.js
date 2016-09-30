@@ -26,9 +26,8 @@ const TestUtils = imports.utils;
 describe('Basic Shard Writing', function () {
     let shard_path, ostream, shard_fd;
     beforeEach(function() {
-        /* don't use /tmp, since it might be a tmpfs, and we should test on ext4. */
-        let shard_file = Gio.File.new_for_path('test.shard');
-        ostream = shard_file.replace(null, false, Gio.FileCreateFlags.NONE, null);
+        let [shard_file, iostream] = Gio.File.new_tmp('XXXXXXX.shard');
+        ostream = iostream.get_output_stream();
         shard_path = shard_file.get_path();
         shard_fd = ostream.get_fd();
     });
