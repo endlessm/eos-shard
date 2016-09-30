@@ -21,6 +21,7 @@
 
 #include "eos-shard-writer-v2.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -288,7 +289,7 @@ write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob,
 {
   g_autoptr(GError) error = NULL;
 
-  g_autoptr(GFileInputStream) file_stream = g_file_read (file, NULL, &error);
+  GFileInputStream *file_stream = g_file_read (file, NULL, &error);
   if (!file_stream) {
     g_error ("Could not read from %s: %s", g_file_get_path (file), error->message);
     return;
@@ -298,8 +299,10 @@ write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob,
   if (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     blob_fd = compress_blob_to_tmp (G_INPUT_STREAM (file_stream));
   } else {
-    blob_fd = g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (file_stream));
+    blob_fd = dup (g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (file_stream)));
   }
+
+  g_clear_object (&file_stream);
 
   /* Find the size by seeking... */
   uint64_t blob_size = lseek (blob_fd, 0, SEEK_END);
@@ -328,7 +331,7 @@ write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob,
     offset += size;
   }
 
-  close (blob_fd);
+  g_assert (close (blob_fd) == 0 || errno == EINTR);
 
   size_t checksum_buf_len = sizeof (blob->sblob.csum);
   g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
