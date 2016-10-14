@@ -107,7 +107,7 @@ eos_shard_blob_get_flags (EosShardBlob *blob)
 }
 
 gsize
-_eos_shard_blob_get_packed_size (EosShardBlob *blob)
+_eos_shard_blob_get_packed_content_size (EosShardBlob *blob)
 {
   return blob->size;
 }
