@@ -55,5 +55,6 @@ void eos_shard_record_unref (EosShardRecord *record);
 
 EosShardBlob * eos_shard_record_lookup_blob (EosShardRecord *record,
                                              const char     *name);
+GSList * eos_shard_record_list_blobs (EosShardRecord *record);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (EosShardRecord, eos_shard_record_unref)

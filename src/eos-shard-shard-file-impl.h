@@ -40,6 +40,8 @@ struct _EosShardShardFileImplInterface
   EosShardBlob *    (* lookup_blob)             (EosShardShardFileImpl  *self,
                                                  EosShardRecord         *record,
                                                  const char             *name);
+  GSList *          (* list_blobs)              (EosShardShardFileImpl  *self,
+                                                 EosShardRecord         *record);
 };
 
 #endif /* EOS_SHARD_SHARD_FILE_IMPL_H */

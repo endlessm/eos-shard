@@ -465,3 +465,10 @@ _eos_shard_shard_file_lookup_blob (EosShardShardFile *self, EosShardRecord *reco
   EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
   return iface->lookup_blob (self->impl, record, name);
 }
+
+GSList *
+_eos_shard_shard_file_list_blobs (EosShardShardFile *self, EosShardRecord *record)
+{
+  EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
+  return iface->list_blobs (self->impl, record);
+}
