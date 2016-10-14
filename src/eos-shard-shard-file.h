@@ -52,5 +52,6 @@ EosShardDictionary * _eos_shard_shard_file_new_dictionary (EosShardShardFile *se
                                                            GError **error);
 
 gsize _eos_shard_shard_file_read_data (EosShardShardFile *self, void *buf, gsize count, goffset offset);
+GSList * _eos_shard_shard_file_list_blobs (EosShardShardFile *self, EosShardRecord *record);
 
 EosShardBlob * _eos_shard_shard_file_lookup_blob (EosShardShardFile *self, EosShardRecord *record, const char *name);

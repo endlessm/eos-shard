@@ -123,6 +123,7 @@ blob_new_for_variant (EosShardShardFile *shard_file,
                  &blob->offs,
                  &blob->size,
                  &blob->uncompressed_size);
+  blob->hdr_size = g_variant_get_size (blob_variant);
   if (!blob->offs)
     return NULL;
   checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
@@ -241,10 +242,20 @@ lookup_blob (EosShardShardFileImpl *impl, EosShardRecord *record, const char *na
   return NULL;
 }
 
+static GSList *
+list_blobs (EosShardShardFileImpl *impl, EosShardRecord *record)
+{
+  GSList *l = NULL;
+  l = g_slist_prepend (l, record->metadata);
+  l = g_slist_prepend (l, record->data);
+  return l;
+}
+
 static void
 shard_file_impl_init (EosShardShardFileImplInterface *iface)
 {
   iface->find_record_by_raw_name = find_record_by_raw_name;
   iface->list_records = list_records;
   iface->lookup_blob = lookup_blob;
+  iface->list_blobs = list_blobs;
 }

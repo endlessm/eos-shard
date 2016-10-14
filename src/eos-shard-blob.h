@@ -52,6 +52,7 @@ struct _EosShardBlob {
   char *content_type;
   EosShardBlobFlags flags;
   uint8_t checksum[0x20];
+  uint64_t hdr_size;
   uint64_t offs;
   uint64_t size;
   uint64_t uncompressed_size;
@@ -68,8 +69,9 @@ EosShardBlobFlags eos_shard_blob_get_flags (EosShardBlob *blob);
 gsize eos_shard_blob_get_content_size (EosShardBlob *blob);
 EosShardBlob * eos_shard_blob_ref (EosShardBlob *blob);
 void eos_shard_blob_unref (EosShardBlob *blob);
+gsize eos_shard_blob_get_blob_size (EosShardBlob *blob);
 
-gsize _eos_shard_blob_get_packed_size (EosShardBlob *blob);
+gsize _eos_shard_blob_get_packed_content_size (EosShardBlob *blob);
 goffset eos_shard_blob_get_offset (EosShardBlob *blob);
 
 EosShardDictionary * eos_shard_blob_load_as_dictionary (EosShardBlob *blob, GError **error);

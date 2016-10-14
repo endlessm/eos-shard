@@ -128,6 +128,7 @@ blob_new (EosShardShardFileImpl *impl, struct eos_shard_v2_blob *sblob)
   blob->flags = sblob->flags;
   memcpy (blob->checksum, sblob->csum, sizeof (blob->checksum));
   blob->size = sblob->size;
+  blob->hdr_size = sizeof (*sblob);
   blob->uncompressed_size = sblob->uncompressed_size;
   blob->offs = sblob->data_start;
 
@@ -262,10 +263,36 @@ lookup_blob (EosShardShardFileImpl *impl, EosShardRecord *record, const char *na
   return read_blob (impl, srecord, name);
 }
 
+static GSList *
+list_blobs (EosShardShardFileImpl *impl, EosShardRecord *record)
+{
+  EosShardShardFileImplV2 *self = EOS_SHARD_SHARD_FILE_IMPL_V2 (impl);
+  struct eos_shard_v2_record *srecord = record->private_data;
+
+  GSList *l = NULL;
+  int i;
+
+  for (i = 0; i < srecord->blob_table_length; i++) {
+    struct eos_shard_v2_record_blob_table_entry entry;
+    if (pread (self->fd, &entry, sizeof (entry), srecord->blob_table_start + i*sizeof (entry)) != sizeof (entry))
+      continue;
+
+    struct eos_shard_v2_blob sblob;
+    if (pread (self->fd, &sblob, sizeof (sblob), entry.blob_start) != sizeof (sblob))
+      continue;
+
+    EosShardBlob *blob = blob_new (impl, &sblob);
+    l = g_slist_prepend (l, blob);
+  }
+
+  return l;
+}
+
 static void
 shard_file_impl_init (EosShardShardFileImplInterface *iface)
 {
   iface->find_record_by_raw_name = find_record_by_raw_name;
   iface->list_records = list_records;
   iface->lookup_blob = lookup_blob;
+  iface->list_blobs = list_blobs;
 }

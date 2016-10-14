@@ -87,10 +87,10 @@ eos_shard_blob_stream_seek (GSeekable *seekable,
 {
   EosShardBlobStream *self;
   goffset absolute;
-  gsize blob_size;
+  gsize blob_content_size;
 
   self = EOS_SHARD_BLOB_STREAM (seekable);
-  blob_size = _eos_shard_blob_get_packed_size (self->blob);
+  blob_content_size = _eos_shard_blob_get_packed_content_size (self->blob);
 
   switch (type) {
     case G_SEEK_CUR:
@@ -100,7 +100,7 @@ eos_shard_blob_stream_seek (GSeekable *seekable,
       absolute = offset;
       break;
     case G_SEEK_END:
-      absolute = blob_size + offset;
+      absolute = blob_content_size + offset;
       break;
     default:
       g_set_error_literal (error,
@@ -110,7 +110,7 @@ eos_shard_blob_stream_seek (GSeekable *seekable,
       return FALSE;
   }
 
-  if (absolute < 0 || absolute > blob_size) {
+  if (absolute < 0 || absolute > blob_content_size) {
     g_set_error_literal (error,
                          G_IO_ERROR,
                          G_IO_ERROR_INVALID_ARGUMENT,
@@ -151,9 +151,11 @@ eos_shard_blob_stream_read (GInputStream  *stream,
   gsize actual_count, size_read;
   int read_error;
   goffset blob_offset;
+  gsize blob_content_size;
 
   blob_offset = eos_shard_blob_get_offset (self->blob);
-  actual_count = MIN (count, _eos_shard_blob_get_packed_size (self->blob) - self->pos);
+  blob_content_size = _eos_shard_blob_get_packed_content_size (self->blob);
+  actual_count = MIN (count, blob_content_size - self->pos);
 
   size_read = _eos_shard_shard_file_read_data (self->shard_file, buffer, actual_count, blob_offset + self->pos);
   read_error = errno;

@@ -102,5 +102,16 @@ eos_shard_record_lookup_blob (EosShardRecord *record,
   return _eos_shard_shard_file_lookup_blob (record->shard_file, record, name);
 }
 
+/**
+ * eos_shard_record_list_blobs :
+ *
+ * Returns: (transfer full) (element-type EosShardBlob): a list of #EosShardBlob
+ */
+GSList *
+eos_shard_record_list_blobs (EosShardRecord *record)
+{
+  return _eos_shard_shard_file_list_blobs (record->shard_file, record);
+}
+
 G_DEFINE_BOXED_TYPE (EosShardRecord, eos_shard_record,
                      eos_shard_record_ref, eos_shard_record_unref)

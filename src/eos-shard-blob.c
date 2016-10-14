@@ -107,7 +107,7 @@ eos_shard_blob_get_flags (EosShardBlob *blob)
 }
 
 gsize
-_eos_shard_blob_get_packed_size (EosShardBlob *blob)
+_eos_shard_blob_get_packed_content_size (EosShardBlob *blob)
 {
   return blob->size;
 }
@@ -150,6 +150,12 @@ EosShardDictionary *
 eos_shard_blob_load_as_dictionary (EosShardBlob *blob, GError **error)
 {
   return _eos_shard_shard_file_new_dictionary (blob->shard_file, blob, error);
+}
+
+gsize
+eos_shard_blob_get_blob_size (EosShardBlob *blob)
+{
+  return blob->hdr_size + _eos_shard_blob_get_packed_content_size (blob);
 }
 
 G_DEFINE_BOXED_TYPE (EosShardBlob, eos_shard_blob,
