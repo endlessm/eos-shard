@@ -128,6 +128,7 @@ blob_new (EosShardShardFileImpl *impl, struct eos_shard_v2_blob *sblob)
   blob->flags = sblob->flags;
   memcpy (blob->checksum, sblob->csum, sizeof (blob->checksum));
   blob->size = sblob->size;
+  blob->hdr_size = sizeof (*sblob);
   blob->uncompressed_size = sblob->uncompressed_size;
   blob->offs = sblob->data_start;
 
