@@ -43,8 +43,10 @@
 
 struct eos_shard_writer_v2_blob_entry
 {
-  char *name;
+  /* Offset to where the sblob is placed in the file... */
   off_t offs;
+
+  char *name;
   struct eos_shard_v2_blob sblob;
 };
 
@@ -83,16 +85,13 @@ struct _EosShardWriterV2
 {
   GObject parent;
 
-  /* This lock writes to the ctx, blobs, and records fields.
-   * Records themselves are meant to be handled by one thread
-   * and are not multi-thread safe. */
+  /* This lock applies to the members below. */
   GMutex lock;
 
   struct write_context ctx;
-
   GPtrArray *blobs;
   GArray *records;
-
+  GHashTable *csum_to_data_start;
   struct constant_pool cpool;
 };
 
@@ -143,6 +142,23 @@ constant_pool_write (struct constant_pool *cpool, int fd, off_t offset)
   }
 }
 
+static guint
+csum_hash (gconstpointer v)
+{
+  /* Simple variant of g_str_hash / the djb hash function. */
+  const signed char *p, *e;
+  guint32 h = 5381;
+  for (p = v, e = v+0x20; p < e; p++)
+    h = (h << 5) + h + *p;
+  return h;
+}
+
+static gboolean
+csum_equal (gconstpointer a, gconstpointer b)
+{
+  return (memcmp (a, b, 0x20)) == 0;
+}
+
 static void
 eos_shard_writer_v2_finalize (GObject *object)
 {
@@ -150,6 +166,7 @@ eos_shard_writer_v2_finalize (GObject *object)
   constant_pool_dispose (&self->cpool);
   g_ptr_array_unref (self->blobs);
   g_array_unref (self->records);
+  g_hash_table_unref (self->csum_to_data_start);
   G_OBJECT_CLASS (eos_shard_writer_v2_parent_class)->finalize (object);
 }
 
@@ -250,6 +267,8 @@ eos_shard_writer_v2_init (EosShardWriterV2 *self)
 
   self->records = g_array_new (FALSE, TRUE, sizeof (struct eos_shard_writer_v2_record_entry));
   g_array_set_clear_func (self->records, (GDestroyNotify) eos_shard_writer_v2_record_entry_clear);
+
+  self->csum_to_data_start = g_hash_table_new (csum_hash, csum_equal);
 }
 
 /**
@@ -282,63 +301,6 @@ compress_blob_to_tmp (GInputStream *file_stream)
   }
 
   return fd;
-}
-
-static void
-write_blob (EosShardWriterV2 *self, struct eos_shard_writer_v2_blob_entry *blob, GFile *file)
-{
-  g_autoptr(GError) error = NULL;
-
-  GFileInputStream *file_stream = g_file_read (file, NULL, &error);
-  if (!file_stream) {
-    g_error ("Could not read from %s: %s", g_file_get_path (file), error->message);
-    return;
-  }
-
-  int blob_fd;
-  if (blob->sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    blob_fd = compress_blob_to_tmp (G_INPUT_STREAM (file_stream));
-  } else {
-    blob_fd = dup (g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (file_stream)));
-  }
-
-  g_clear_object (&file_stream);
-
-  /* Find the size by seeking... */
-  uint64_t blob_size = lseek (blob_fd, 0, SEEK_END);
-  g_assert (blob_size >= 0);
-  g_assert (lseek (blob_fd, 0, SEEK_SET) >= 0);
-
-  /* Position the blob in the file. */
-
-  /* XXX: We could use different locks for ctx offset and blobs
-   * if we notice a lot of threading contention in the future. */
-  g_mutex_lock (&self->lock);
-  int shard_fd = self->ctx.fd;
-  blob->offs = self->ctx.offset;
-  self->ctx.offset = ALIGN (self->ctx.offset + sizeof (blob->sblob) + blob_size);
-  g_mutex_unlock (&self->lock);
-
-  off_t data_start = blob->offs + sizeof (blob->sblob);
-  off_t offset = data_start;
-
-  uint8_t buf[4096*4];
-  int size;
-  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
-  while ((size = read (blob_fd, buf, sizeof (buf))) != 0) {
-    g_assert (pwrite (shard_fd, buf, size, offset) >= 0);
-    g_checksum_update (checksum, buf, size);
-    offset += size;
-  }
-
-  g_assert (close (blob_fd) == 0 || errno == EINTR);
-
-  size_t checksum_buf_len = sizeof (blob->sblob.csum);
-  g_checksum_get_digest (checksum, blob->sblob.csum, &checksum_buf_len);
-  g_assert (checksum_buf_len == sizeof (blob->sblob.csum));
-
-  blob->sblob.data_start = data_start;
-  blob->sblob.size = blob_size;
 }
 
 /**
@@ -377,20 +339,83 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_return_val_if_fail (strlen (name) <= EOS_SHARD_V2_BLOB_MAX_NAME_SIZE, 0);
   g_return_val_if_fail (strlen (content_type) <= EOS_SHARD_V2_BLOB_MAX_CONTENT_TYPE_SIZE, 0);
 
-  g_mutex_lock (&self->lock);
-
   b.sblob.flags = flags;
+  b.sblob.uncompressed_size = g_file_info_get_size (info);
+
+  /* Lock around the cpool. */
+  g_mutex_lock (&self->lock);
   b.sblob.name_offs = constant_pool_add (&self->cpool, name);
   b.sblob.content_type_offs = constant_pool_add (&self->cpool, content_type);
-  b.sblob.uncompressed_size = g_file_info_get_size (info);
+  g_mutex_unlock (&self->lock);
+
+  /* Now deal with blob contents. */
+
+  g_autoptr(GError) error = NULL;
+  GFileInputStream *file_stream = g_file_read (file, NULL, &error);
+  if (!file_stream) {
+    g_error ("Could not read from %s: %s", g_file_get_path (file), error->message);
+    return -1;
+  }
+
+  int blob_fd;
+  if (b.sblob.flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
+    blob_fd = compress_blob_to_tmp (G_INPUT_STREAM (file_stream));
+  } else {
+    blob_fd = g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (file_stream));
+  }
+
+  /* Find the size by seeking... */
+  uint64_t blob_size = lseek (blob_fd, 0, SEEK_END);
+  g_assert (blob_size >= 0);
+  g_assert (lseek (blob_fd, 0, SEEK_SET) >= 0);
+
+  /* Checksum the blob. */
+  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
+  uint8_t buf[4096*4];
+  int size;
+  while ((size = read (blob_fd, buf, sizeof (buf))) != 0)
+    g_checksum_update (checksum, buf, size);
+
+  size_t checksum_buf_len = sizeof (b.sblob.csum);
+  g_checksum_get_digest (checksum, b.sblob.csum, &checksum_buf_len);
+  g_assert (checksum_buf_len == sizeof (b.sblob.csum));
+
+  /* Add the blob entry to the file. */
+  g_mutex_lock (&self->lock);
+
+  /* Look for a checksum in our table to return early if we have it... */
+  off_t data_start = GPOINTER_TO_UINT (g_hash_table_lookup (self->csum_to_data_start, &b.sblob.csum));
 
   struct eos_shard_writer_v2_blob_entry *blob = g_memdup (&b, sizeof (b));
   g_ptr_array_add (self->blobs, blob);
   uint64_t index = self->blobs->len - 1;
 
-  g_mutex_unlock (&self->lock);
+  /* If the blob data isn't already in the file, write it in. */
+  if (data_start == 0) {
+    /* Position the blob in the file, and add it to the csum table. */
+    int shard_fd = self->ctx.fd;
+    data_start = self->ctx.offset;
+    self->ctx.offset = ALIGN (self->ctx.offset + blob_size);
+    g_hash_table_insert (self->csum_to_data_start, &blob->sblob.csum, GUINT_TO_POINTER (data_start));
 
-  write_blob (self, blob, file);
+    /* Unlock before writing data to the file. */
+    g_mutex_unlock (&self->lock);
+
+    off_t offset = data_start;
+
+    lseek (blob_fd, 0, SEEK_SET);
+    while ((size = read (blob_fd, buf, sizeof (buf))) != 0) {
+      g_assert (pwrite (shard_fd, buf, size, offset) >= 0);
+      offset += size;
+    }
+  } else {
+    g_mutex_unlock (&self->lock);
+  }
+
+  blob->sblob.data_start = data_start;
+  blob->sblob.size = blob_size;
+
+  g_assert (close (blob_fd) == 0 || errno == EINTR);
 
   return index;
 }
@@ -485,18 +510,6 @@ compare_records (gconstpointer a, gconstpointer b)
   return memcmp (r_a->raw_name, r_b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
-static void
-finish_writing_blobs (EosShardWriterV2 *self, struct write_context *ctx)
-{
-  int i;
-
-  /* Now go through and write out blob headers. */
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
-  }
-}
-
 void
 eos_shard_writer_v2_finish (EosShardWriterV2 *self)
 {
@@ -512,8 +525,13 @@ eos_shard_writer_v2_finish (EosShardWriterV2 *self)
   memcpy (hdr.magic, EOS_SHARD_V2_MAGIC, sizeof (hdr.magic));
   hdr.records_length = self->records->len;
 
-  finish_writing_blobs (self, &self->ctx);
-  ctx->offset = ALIGN (ctx->offset);
+  /* Now go through and write out blob headers. */
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
+    b->offs = ctx->offset;
+    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), ctx->offset) >= 0);
+    ctx->offset += sizeof (b->sblob);
+  }
 
   /* Now write out blob tables... */
   for (i = 0; i < self->records->len; i++) {
