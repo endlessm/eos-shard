@@ -46,7 +46,6 @@ struct eos_shard_writer_v2_blob_entry
   char *name;
   off_t offs;
   struct eos_shard_v2_blob sblob;
-  int idx;
 };
 
 struct eos_shard_writer_v2_record_entry
@@ -378,33 +377,32 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
   g_checksum_get_digest (checksum, b.sblob.csum, &checksum_buf_len);
   g_assert (checksum_buf_len == sizeof (b.sblob.csum));
 
-  struct eos_shard_writer_v2_blob_entry *blob;
-
   /* Look for a checksum in our table to return early if we have it... */
-  blob = g_hash_table_lookup (self->csum_to_blob, &b.sblob.csum);
-  if (blob != NULL)
-    return blob->idx;
+  off_t data_start = GPOINTER_TO_UINT (g_hash_table_lookup (self->csum_to_blob, &b.sblob.csum));
 
-  /* If we don't have a blob in our checksum table, write it in */
-  blob = g_memdup (&b, sizeof (b));
-  g_ptr_array_add (self->blobs, blob);
-  blob->idx = self->blobs->len - 1;
-
-  /* Position the blob in the file, and add it to the csum table. */
   g_mutex_lock (&self->lock);
-  int shard_fd = self->ctx.fd;
-  blob->offs = self->ctx.offset;
-  self->ctx.offset = ALIGN (self->ctx.offset + sizeof (blob->sblob) + blob_size);
-  g_hash_table_insert (self->csum_to_blob, &blob->sblob.csum, blob);
+  struct eos_shard_writer_v2_blob_entry *blob = g_memdup (&b, sizeof (b));
+  g_ptr_array_add (self->blobs, blob);
+  uint64_t index = self->blobs->len - 1;
   g_mutex_unlock (&self->lock);
 
-  off_t data_start = blob->offs + sizeof (blob->sblob);
-  off_t offset = data_start;
+  /* If the blob data isn't already in the file, write it in. */
+  if (data_start == 0) {
+    g_mutex_lock (&self->lock);
+    /* Position the blob in the file, and add it to the csum table. */
+    int shard_fd = self->ctx.fd;
+    data_start = self->ctx.offset;
+    self->ctx.offset = ALIGN (self->ctx.offset + blob_size);
+    g_hash_table_insert (self->csum_to_blob, &blob->sblob.csum, GUINT_TO_POINTER (data_start));
+    g_mutex_unlock (&self->lock);
 
-  lseek (blob_fd, 0, SEEK_SET);
-  while ((size = read (blob_fd, buf, sizeof (buf))) != 0) {
-    g_assert (pwrite (shard_fd, buf, size, offset) >= 0);
-    offset += size;
+    off_t offset = data_start;
+
+    lseek (blob_fd, 0, SEEK_SET);
+    while ((size = read (blob_fd, buf, sizeof (buf))) != 0) {
+      g_assert (pwrite (shard_fd, buf, size, offset) >= 0);
+      offset += size;
+    }
   }
 
   blob->sblob.data_start = data_start;
@@ -412,7 +410,7 @@ eos_shard_writer_v2_add_blob (EosShardWriterV2  *self,
 
   g_assert (close (blob_fd) == 0 || errno == EINTR);
 
-  return blob->idx;
+  return index;
 }
 
 /**
@@ -505,18 +503,6 @@ compare_records (gconstpointer a, gconstpointer b)
   return memcmp (r_a->raw_name, r_b->raw_name, EOS_SHARD_RAW_NAME_SIZE);
 }
 
-static void
-finish_writing_blobs (EosShardWriterV2 *self, struct write_context *ctx)
-{
-  int i;
-
-  /* Now go through and write out blob headers. */
-  for (i = 0; i < self->blobs->len; i++) {
-    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
-    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), b->offs) >= 0);
-  }
-}
-
 void
 eos_shard_writer_v2_finish (EosShardWriterV2 *self)
 {
@@ -532,8 +518,13 @@ eos_shard_writer_v2_finish (EosShardWriterV2 *self)
   memcpy (hdr.magic, EOS_SHARD_V2_MAGIC, sizeof (hdr.magic));
   hdr.records_length = self->records->len;
 
-  finish_writing_blobs (self, &self->ctx);
-  ctx->offset = ALIGN (ctx->offset);
+  /* Now go through and write out blob headers. */
+  for (i = 0; i < self->blobs->len; i++) {
+    struct eos_shard_writer_v2_blob_entry *b = g_ptr_array_index (self->blobs, i);
+    b->offs = ctx->offset;
+    g_assert (pwrite (ctx->fd, &b->sblob, sizeof (b->sblob), ctx->offset) >= 0);
+    ctx->offset += sizeof (b->sblob);
+  }
 
   /* Now write out blob tables... */
   for (i = 0; i < self->records->len; i++) {
