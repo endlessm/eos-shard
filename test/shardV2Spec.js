@@ -335,6 +335,68 @@ describe('Basic Shard Writing', function () {
         });
     });
 
+    describe('handles deduplication', function () {
+        it('deduplicates blob data', function () {
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+
+            /* Add the same blob to multiple records and assure they have the same offset... */
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+
+            r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2259f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+
+            r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f225af');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob(EosShard.V2_BLOB_METADATA,
+                                                                     TestUtils.getTestFile('7d97e98f8af710c7e7fe703abc8f639e0ee507c4.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+
+            shard_writer.finish();
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            let offset1 = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f').metadata.get_offset();
+            let offset2 = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2259f').metadata.get_offset();
+            let offset3 = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f225af').metadata.get_offset();
+
+            expect(offset1).toEqual(offset2);
+            expect(offset1).not.toEqual(offset3);
+        });
+
+        it('handles same data with different name', function () {
+            let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
+
+            /* Add the same blob to multiple blobs with different names, and assure it's not deduplicated... */
+            let r = shard_writer.add_record('f572d396fae9206628714fb2ce00f72e94f2258f');
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob('foo',
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+            shard_writer.add_blob_to_record(r, shard_writer.add_blob('bar',
+                                                                     TestUtils.getTestFile('f572d396fae9206628714fb2ce00f72e94f2258f.json'),
+                                                                     'application/json',
+                                                                     EosShard.BlobFlags.NONE));
+
+            shard_writer.finish();
+
+            /* Ensure we can find both names. */
+
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+            let record = shard_file.find_record_by_hex_name('f572d396fae9206628714fb2ce00f72e94f2258f');
+            expect(record.lookup_blob('foo')).not.toBeNull();
+            expect(record.lookup_blob('bar')).not.toBeNull();
+        });
+    });
+
     describe('specific bugs', function () {
         it('handles interleaved compressed / uncompressed pairs correctly', function () {
             let shard_writer = new EosShard.WriterV2({ fd: shard_fd });
