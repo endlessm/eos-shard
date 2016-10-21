@@ -90,7 +90,7 @@ eos_shard_blob_stream_seek (GSeekable *seekable,
   gsize blob_content_size;
 
   self = EOS_SHARD_BLOB_STREAM (seekable);
-  blob_content_size = _eos_shard_blob_get_packed_content_size (self->blob);
+  blob_content_size = eos_shard_blob_get_packed_content_size (self->blob);
 
   switch (type) {
     case G_SEEK_CUR:
@@ -154,7 +154,7 @@ eos_shard_blob_stream_read (GInputStream  *stream,
   gsize blob_content_size;
 
   blob_offset = eos_shard_blob_get_offset (self->blob);
-  blob_content_size = _eos_shard_blob_get_packed_content_size (self->blob);
+  blob_content_size = eos_shard_blob_get_packed_content_size (self->blob);
   actual_count = MIN (count, blob_content_size - self->pos);
 
   size_read = _eos_shard_shard_file_read_data (self->shard_file, buffer, actual_count, blob_offset + self->pos);

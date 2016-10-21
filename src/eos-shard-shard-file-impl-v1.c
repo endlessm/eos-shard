@@ -123,7 +123,6 @@ blob_new_for_variant (EosShardShardFile *shard_file,
                  &blob->offs,
                  &blob->size,
                  &blob->uncompressed_size);
-  blob->hdr_size = g_variant_get_size (blob_variant);
   if (!blob->offs)
     return NULL;
   checksum = g_variant_get_fixed_array (checksum_variant, &n_elts, 1);
