@@ -245,8 +245,12 @@ static GSList *
 list_blobs (EosShardShardFileImpl *impl, EosShardRecord *record)
 {
   GSList *l = NULL;
-  l = g_slist_prepend (l, record->metadata);
-  l = g_slist_prepend (l, record->data);
+
+  if (record->metadata)
+    l = g_slist_prepend (l, eos_shard_blob_ref (record->metadata));
+  if (record->data)
+    l = g_slist_prepend (l, eos_shard_blob_ref (record->data));
+
   return l;
 }
 
