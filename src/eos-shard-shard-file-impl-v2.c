@@ -250,6 +250,23 @@ list_records (EosShardShardFileImpl *impl)
   return l;
 }
 
+static void
+records_foreach (EosShardShardFileImpl *impl, EosShardRecordsForeachFunc func, gpointer user_data)
+{
+  EosShardShardFileImplV2 *self = EOS_SHARD_SHARD_FILE_IMPL_V2 (impl);
+  int i;
+
+  for (i = 0; i < self->hdr.records_length; i++) {
+    struct eos_shard_v2_record *srecord = &self->records[i];
+    if (record_is_tombstone (srecord))
+      continue;
+
+    EosShardRecord *record = record_new (impl, srecord);
+    func (record, user_data);
+    eos_shard_record_unref (record);
+  }
+}
+
 static EosShardBlob *
 lookup_blob (EosShardShardFileImpl *impl, EosShardRecord *record, const char *name)
 {
@@ -294,4 +311,5 @@ shard_file_impl_init (EosShardShardFileImplInterface *iface)
   iface->list_records = list_records;
   iface->lookup_blob = lookup_blob;
   iface->list_blobs = list_blobs;
+  iface->records_foreach = records_foreach;
 }

@@ -26,7 +26,7 @@ dnl Minor and micro versions: increment micro version when making a release.
 dnl Minor version is even for a stable release and odd for a development release.
 dnl When making any release, if the API changes, set the interface age to 0.
 m4_define([_SHARD_MINOR_VERSION_MACRO], [1])
-m4_define([_SHARD_MICRO_VERSION_MACRO], [1])
+m4_define([_SHARD_MICRO_VERSION_MACRO], [2])
 m4_define([_SHARD_INTERFACE_AGE_MACRO], [0])
 dnl Full version, for use in AC_INIT
 m4_define([_SHARD_VERSION_MACRO],

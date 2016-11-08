@@ -32,8 +32,6 @@
 #include "eos-shard-record.h"
 #include "eos-shard-dictionary.h"
 
-#include "eos-shard-shard-file-impl.h"
-
 #include "eos-shard-format-v1.h"
 #include "eos-shard-shard-file-impl-v1.h"
 
@@ -396,6 +394,23 @@ eos_shard_shard_file_list_records (EosShardShardFile *self)
 {
   EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
   return iface->list_records (self->impl);
+}
+
+/**
+ * eos_shard_shard_file_records_foreach:
+ * @self: the file
+ * @func: (scope call): the function to call for each record
+ * @user_data: (allow-none): user data to pass to the function
+ *
+ * Calls function on each record
+ */
+void
+eos_shard_shard_file_records_foreach (EosShardShardFile *self,
+                                      EosShardRecordsForeachFunc func,
+                                      gpointer user_data)
+{
+  EosShardShardFileImplInterface *iface = EOS_SHARD_SHARD_FILE_IMPL_GET_IFACE (self->impl);
+  iface->records_foreach (self->impl, func, user_data);
 }
 
 gsize
