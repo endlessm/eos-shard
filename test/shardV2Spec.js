@@ -148,6 +148,18 @@ describe('Basic Shard Writing', function () {
             expect(record_names).toEqual(['7d97e98f8af710c7e7fe703abc8f639e0ee507c4',
                                           'f572d396fae9206628714fb2ce00f72e94f2258f']);
         });
+
+        it('can map a function over each record in a shard file', function() {
+            let shard_file = new EosShard.ShardFile({ path: shard_path });
+            shard_file.init(null);
+
+            let record_names = [];
+            shard_file.records_foreach(function(record) {
+                record_names.push(record.get_hex_name());
+            });
+            expect(record_names).toEqual(['7d97e98f8af710c7e7fe703abc8f639e0ee507c4',
+                                          'f572d396fae9206628714fb2ce00f72e94f2258f']);
+        });
     });
 
     describe('NULL errors', function() {

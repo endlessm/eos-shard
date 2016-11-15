@@ -235,6 +235,24 @@ list_records (EosShardShardFileImpl *impl)
   return g_slist_reverse (l);
 }
 
+static void
+records_foreach (EosShardShardFileImpl *impl, EosShardRecordsForeachFunc func, gpointer user_data)
+{
+  EosShardShardFileImplV1 *self = EOS_SHARD_SHARD_FILE_IMPL_V1 (impl);
+
+  g_autoptr(GVariantIter) records_iter;
+  g_variant_get (self->header_variant, "(&sa" EOS_SHARD_V1_RECORD_ENTRY ")",
+                 NULL, &records_iter);
+
+  GVariant *child;
+  while ((child = g_variant_iter_next_value (records_iter))) {
+    EosShardRecord *record = record_new_for_variant (self->shard_file, child);
+    func (record, user_data);
+    eos_shard_record_unref (record);
+    g_variant_unref (child);
+  }
+}
+
 static EosShardBlob *
 lookup_blob (EosShardShardFileImpl *impl, EosShardRecord *record, const char *name)
 {
@@ -261,4 +279,5 @@ shard_file_impl_init (EosShardShardFileImplInterface *iface)
   iface->list_records = list_records;
   iface->lookup_blob = lookup_blob;
   iface->list_blobs = list_blobs;
+  iface->records_foreach = records_foreach;
 }

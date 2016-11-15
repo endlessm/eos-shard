@@ -28,6 +28,9 @@
 #define EOS_SHARD_TYPE_SHARD_FILE_IMPL (eos_shard_shard_file_impl_get_type ())
 G_DECLARE_INTERFACE (EosShardShardFileImpl, eos_shard_shard_file_impl, EOS_SHARD, SHARD_FILE_IMPL, GObject)
 
+typedef void (*EosShardRecordsForeachFunc) (EosShardRecord *record,
+                                            gpointer        user_data);
+
 struct _EosShardShardFileImplInterface
 {
   GTypeInterface g_iface;
@@ -42,6 +45,9 @@ struct _EosShardShardFileImplInterface
                                                  const char             *name);
   GSList *          (* list_blobs)              (EosShardShardFileImpl  *self,
                                                  EosShardRecord         *record);
+  void              (* records_foreach)         (EosShardShardFileImpl  *self,
+                                                 EosShardRecordsForeachFunc func,
+                                                 gpointer user_data);
 };
 
 #endif /* EOS_SHARD_SHARD_FILE_IMPL_H */

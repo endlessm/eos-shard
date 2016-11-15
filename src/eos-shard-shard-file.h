@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include "eos-shard-types.h"
+#include "eos-shard-shard-file-impl.h"
 
 #define EOS_SHARD_RAW_NAME_SIZE 20
 #define EOS_SHARD_HEX_NAME_SIZE (EOS_SHARD_RAW_NAME_SIZE*2)
@@ -43,6 +44,7 @@ gboolean eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *
 EosShardRecord * eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *raw_name);
 EosShardRecord * eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, char *hex_name);
 GSList * eos_shard_shard_file_list_records (EosShardShardFile *self);
+void eos_shard_shard_file_records_foreach (EosShardShardFile *self, EosShardRecordsForeachFunc func, gpointer user_data);
 
 GBytes * _eos_shard_shard_file_load_blob (EosShardShardFile            *self,
                                           EosShardBlob                 *blob,
