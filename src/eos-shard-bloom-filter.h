@@ -44,8 +44,8 @@ gboolean bloom_filter_init_for_fd (struct bloom_filter *self,
 
 void bloom_filter_write_to_stream (struct bloom_filter *self, GOutputStream *out);
 
-void bloom_filter_add (struct bloom_filter *self, char *key);
-gboolean bloom_filter_test (struct bloom_filter *self, char *key);
+void bloom_filter_add (struct bloom_filter *self, const char *key);
+gboolean bloom_filter_test (struct bloom_filter *self, const char *key);
 
 void bloom_filter_dispose (struct bloom_filter *self);
 

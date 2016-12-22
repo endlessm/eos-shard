@@ -42,7 +42,7 @@ void eos_shard_util_raw_name_to_hex_name (char *hex_name, const uint8_t *raw_nam
 gboolean eos_shard_util_hex_name_to_raw_name (uint8_t raw_name[20], const char *hex_name);
 
 EosShardRecord * eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *raw_name);
-EosShardRecord * eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, char *hex_name);
+EosShardRecord * eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, const char *hex_name);
 GSList * eos_shard_shard_file_list_records (EosShardShardFile *self);
 void eos_shard_shard_file_records_foreach (EosShardShardFile *self, EosShardRecordsForeachFunc func, gpointer user_data);
 

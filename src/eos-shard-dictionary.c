@@ -56,7 +56,7 @@ dictionary_open (struct dictionary_header *header, int fd, goffset offset)
 /* Find the block for a given key with a binary search. */
 static gboolean
 dictionary_find_block (EosShardDictionary *dictionary,
-                       char *key,
+                       const char *key,
                        struct dictionary_block_table_entry *block_out,
                        GError **error)
 {
@@ -122,7 +122,7 @@ dictionary_find_block (EosShardDictionary *dictionary,
 static uint64_t
 dictionary_lookup_key_in_block (EosShardDictionary *dictionary,
                                 struct dictionary_block_table_entry block,
-                                char *key,
+                                const char *key,
                                 GError **error)
 {
   ssize_t len;
@@ -171,7 +171,7 @@ dictionary_lookup_key_in_block (EosShardDictionary *dictionary,
 }
 
 static uint64_t
-dictionary_lookup_key (EosShardDictionary *dictionary, char *key, GError **error)
+dictionary_lookup_key (EosShardDictionary *dictionary, const char *key, GError **error)
 {
   if (dictionary->bloom_filter)
     if (!bloom_filter_test (dictionary->bloom_filter, key))
@@ -253,7 +253,7 @@ read_cstring (int fd, off_t offset)
 
 /* Find a key within the dictionary, returning the value stored at key if found */
 char *
-eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary, char *key, GError **error)
+eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary, const char *key, GError **error)
 {
   uint64_t value_offset = dictionary_lookup_key (dictionary, key, error);
   if (value_offset == 0)
