@@ -32,5 +32,5 @@ EosShardDictionary * eos_shard_dictionary_new_for_fd (int fd,
 EosShardDictionary * eos_shard_dictionary_ref (EosShardDictionary *dictionary);
 void eos_shard_dictionary_unref (EosShardDictionary *dictionary);
 char * eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary,
-                                        char *key,
+                                        const char *key,
                                         GError **error);

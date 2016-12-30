@@ -372,7 +372,7 @@ eos_shard_shard_file_find_record_by_raw_name (EosShardShardFile *self, uint8_t *
  * Returns: (transfer full): the #EosShardRecord with the given hex name
  */
 EosShardRecord *
-eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, char *hex_name)
+eos_shard_shard_file_find_record_by_hex_name (EosShardShardFile *self, const char *hex_name)
 {
   uint8_t raw_name[EOS_SHARD_RAW_NAME_SIZE];
 

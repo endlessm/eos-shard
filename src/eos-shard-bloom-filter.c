@@ -107,10 +107,10 @@ fnv_mix (uint32_t a) {
 }
 
 static uint32_t
-fnv_1a (char *v)
+fnv_1a (const char *v)
 {
   uint32_t a = FNV_32_OFFS_BASIS;
-  char *c;
+  const char *c;
   for (c = v; *c; c++) {
     a = (a ^ *c) * FNV_32_PRIME;
   }
@@ -129,7 +129,7 @@ fnv_1a_b (uint32_t a)
 }
 
 static void
-compute_hashes (char *key, uint32_t *hashes, size_t n_hashes, uint32_t n_bits)
+compute_hashes (const char *key, uint32_t *hashes, size_t n_hashes, uint32_t n_bits)
 {
   uint32_t a = fnv_1a (key);
   uint32_t b = fnv_1a_b (a);
@@ -150,7 +150,7 @@ compute_hashes (char *key, uint32_t *hashes, size_t n_hashes, uint32_t n_bits)
  * Hashes the key and adds it to the bloom filter.
  */
 void
-bloom_filter_add (struct bloom_filter *self, char *key)
+bloom_filter_add (struct bloom_filter *self, const char *key)
 {
   if (self->header.n_bits == 0)
     return;
@@ -183,7 +183,7 @@ bloom_filter_add (struct bloom_filter *self, char *key)
  * Returns: FALSE if key is definitely not present, TRUE if it probably is
  */
 gboolean
-bloom_filter_test (struct bloom_filter *self, char *key)
+bloom_filter_test (struct bloom_filter *self, const char *key)
 {
   if (self->header.n_bits == 0)
     return FALSE;
