@@ -34,3 +34,5 @@ void eos_shard_dictionary_unref (EosShardDictionary *dictionary);
 char * eos_shard_dictionary_lookup_key (EosShardDictionary *dictionary,
                                         const char *key,
                                         GError **error);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (EosShardDictionary, eos_shard_dictionary_unref)
