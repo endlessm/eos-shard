@@ -35,6 +35,7 @@ G_DECLARE_FINAL_TYPE (EosShardFile, eos_shard_file, EOS_SHARD, FILE, GObject)
 /**
  * eos_shard_file_new:
  * @uri: The URI to create this #GFile at.
+ * @uri_scheme: The URI scheme to use.
  * @blob: An #EosShardBlob to read for this file (transfer full)
  *
  * Creates a new #GFile with support for reading #EosShardBlob
@@ -42,6 +43,8 @@ G_DECLARE_FINAL_TYPE (EosShardFile, eos_shard_file, EOS_SHARD, FILE, GObject)
  *
  * Returns: (transfer full): A #GFile implementation to read the shard
  */
-GFile *eos_shard_file_new (const gchar *uri, EosShardBlob *blob);
+GFile *eos_shard_file_new (const gchar *uri,
+                           const gchar *uri_scheme,
+                           EosShardBlob *blob);
 
 G_END_DECLS

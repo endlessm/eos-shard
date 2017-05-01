@@ -35,6 +35,7 @@ struct _EosShardFile
 typedef struct
 {
   gchar *uri;
+  gchar *uri_scheme;
   EosShardBlob *blob;
 } EosShardFilePrivate;
 
@@ -43,6 +44,7 @@ enum
   PROP_0,
 
   PROP_URI,
+  PROP_URI_SCHEME,
   PROP_BLOB,
   N_PROPERTIES
 };
@@ -82,13 +84,30 @@ eos_shard_file_set_uri (EosShardFile *self, const gchar *uri)
 {
   EosShardFilePrivate *priv = EOS_SHARD_FILE_PRIVATE (self);
 
-  g_return_if_fail (g_str_has_prefix (uri, "ekn:"));
+  if (priv->uri_scheme)
+    g_return_if_fail (g_str_has_prefix (uri, priv->uri_scheme));
 
   if (g_strcmp0 (priv->uri, uri) != 0)
     {
       g_free (priv->uri);
       priv->uri = g_strdup (uri);
       g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_URI]);
+    }
+}
+
+static inline void
+eos_shard_file_set_uri_scheme (EosShardFile *self, const gchar *uri_scheme)
+{
+  EosShardFilePrivate *priv = EOS_SHARD_FILE_PRIVATE (self);
+
+  if (priv->uri)
+    g_return_if_fail (g_str_has_prefix (priv->uri, uri_scheme));
+
+  if (g_strcmp0 (priv->uri_scheme, uri_scheme) != 0)
+    {
+      g_free (priv->uri_scheme);
+      priv->uri_scheme = g_strdup (uri_scheme);
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_URI_SCHEME]);
     }
 }
 
@@ -118,6 +137,9 @@ eos_shard_file_set_property (GObject      *self,
     case PROP_URI:
       eos_shard_file_set_uri (EOS_SHARD_FILE (self), g_value_get_string (value));
       break;
+    case PROP_URI_SCHEME:
+      eos_shard_file_set_uri_scheme (EOS_SHARD_FILE (self), g_value_get_string (value));
+      break;
     case PROP_BLOB:
       eos_shard_file_set_blob (EOS_SHARD_FILE (self), g_value_get_pointer (value));
       break;
@@ -143,6 +165,9 @@ eos_shard_file_get_property (GObject    *self,
     case PROP_URI:
       g_value_set_string (value, priv->uri);
       break;
+    case PROP_URI_SCHEME:
+      g_value_set_string (value, priv->uri_scheme);
+      break;
     case PROP_BLOB:
       g_value_set_pointer (value, priv->blob);
       break;
@@ -158,7 +183,7 @@ static GFile *
 eos_shard_file_dup (GFile *self)
 {
   EosShardFilePrivate *priv = EOS_SHARD_FILE_PRIVATE (self);
-  return eos_shard_file_new (priv->uri, priv->blob);
+  return eos_shard_file_new (priv->uri, priv->uri_scheme, priv->blob);
 }
 
 static guint
@@ -182,13 +207,15 @@ eos_shard_file_is_native (GFile *self)
 static gboolean 
 eos_shard_file_has_uri_scheme (GFile *self, const char *uri_scheme)
 {
-  return g_str_equal ("ekn", uri_scheme);
+  EosShardFilePrivate *priv = EOS_SHARD_FILE_PRIVATE (self);
+  return g_str_equal (priv->uri_scheme, uri_scheme);
 }
 
 static char *
 eos_shard_file_get_uri_scheme (GFile *self)
 {
-  return g_strdup ("ekn");
+  EosShardFilePrivate *priv = EOS_SHARD_FILE_PRIVATE (self);
+  return g_strdup (priv->uri_scheme);
 }
 
 static char *
@@ -288,7 +315,16 @@ eos_shard_file_class_init (EosShardFileClass *klass)
   properties[PROP_URI] =
     g_param_spec_string ("uri",
                          "URI",
-                         "EOS Knowledge URI",
+                         "URI to associate this file with",
+                         NULL,
+                         G_PARAM_READWRITE |
+                         G_PARAM_CONSTRUCT_ONLY |
+                         G_PARAM_STATIC_STRINGS);
+
+  properties[PROP_URI_SCHEME] =
+    g_param_spec_string ("uri-scheme",
+                         "URI Scheme",
+                         "URI Scheme to use",
                          NULL,
                          G_PARAM_READWRITE |
                          G_PARAM_CONSTRUCT_ONLY |
@@ -306,7 +342,13 @@ eos_shard_file_class_init (EosShardFileClass *klass)
 }
 
 GFile *
-eos_shard_file_new (const gchar *uri, EosShardBlob *blob)
+eos_shard_file_new (const gchar *uri,
+                    const gchar *uri_scheme,
+                    EosShardBlob *blob)
 {
-  return g_object_new (EOS_SHARD_TYPE_FILE, "uri", uri, "blob", blob, NULL);
+  return g_object_new (EOS_SHARD_TYPE_FILE,
+                       "uri", uri,
+                       "uri-scheme", uri_scheme,
+                       "blob", blob,
+                       NULL);
 }
