@@ -24,6 +24,7 @@
 
 #include "eos-shard-types.h"
 #include "eos-shard-blob-stream.h"
+#include "eos-shard-shard-file.h"
 
 typedef enum
 {
