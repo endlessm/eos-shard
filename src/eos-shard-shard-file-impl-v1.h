@@ -21,6 +21,7 @@
 #define EOS_SHARD_SHARD_FILE_IMPL_V1_H
 
 #include "eos-shard-types.h"
+#include "eos-shard-shard-file.h"
 #include "eos-shard-shard-file-impl.h"
 
 #define EOS_SHARD_TYPE_SHARD_FILE_IMPL_V1 (eos_shard_shard_file_impl_v1_get_type ())

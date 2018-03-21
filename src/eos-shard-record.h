@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include "eos-shard-types.h"
+#include "eos-shard-shard-file.h"
 
 /**
  * EosShardRecord:
