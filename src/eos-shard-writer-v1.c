@@ -195,7 +195,7 @@ write_blob (int fd, struct eos_shard_writer_v1_blob_entry *blob)
     return;
   }
 
-  g_autoptr(GInputStream) stream;
+  g_autoptr(GInputStream) stream = NULL;
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
     g_autoptr(GZlibCompressor) compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);

@@ -449,9 +449,9 @@ _eos_shard_shard_file_load_blob (EosShardShardFile *self, EosShardBlob *blob, GE
   }
 
   if (blob->flags & EOS_SHARD_BLOB_FLAG_COMPRESSED_ZLIB) {
-    g_autoptr(GInputStream) bytestream;
-    g_autoptr(GZlibDecompressor) decompressor;
-    g_autoptr(GInputStream) out_stream;
+    g_autoptr(GInputStream) bytestream = NULL;
+    g_autoptr(GZlibDecompressor) decompressor = NULL;
+    g_autoptr(GInputStream) out_stream = NULL;
 
     decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
     bytestream = g_memory_input_stream_new_from_bytes (bytes);
